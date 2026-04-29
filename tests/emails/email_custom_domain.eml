@@ -1,0 +1,28 @@
+Date: Tue, 13 Jan 2026 04:09:21 +0100 (CET)
+From: Kaktus <kaktus@mailflusher.com>
+To: <ebay@example.com>
+Subject: Test Email
+Content-Type: multipart/mixed; boundary="----=_Part_77362_3251582616.9224237914796"
+
+------=_Part_77362_3251582616.9224237914796
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,<br>
+<br>
+This is a test email.<br>
+<br>
+Kaktus
+
+
+------=_Part_77362_3251582616.9224237914796
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,
+
+This is a test email.
+
+Kaktus
+
+------=_Part_77362_3251582616.9224237914796--

@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Controllers\Api\Username;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\UsernameResource;
+use Illuminate\Http\Request;
+
+class CatchAllUsernameController extends Controller
+{
+    public function store(Request $request)
+    {
+        if (! user()->canUseCatchAll()) {
+            return response('Catch-all is not available on your current plan. Please upgrade.', 403);
+        }
+
+        $request->validate(['id' => 'required|string']);
+
+        $username = user()->usernames()->findOrFail($request->id);
+
+        $username->enableCatchAll();
+
+        return new UsernameResource($username->load('defaultRecipient')->loadCount('aliases'));
+    }
+
+    public function destroy($id)
+    {
+        $username = user()->usernames()->findOrFail($id);
+
+        $username->disableCatchAll();
+
+        return response('', 204);
+    }
+}

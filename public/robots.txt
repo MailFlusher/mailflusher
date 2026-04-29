@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /settings/
+Disallow: /aliases
+Disallow: /recipients
+Disallow: /usernames
+Disallow: /domains
+Disallow: /rules
+Disallow: /blocklist
+Disallow: /failed-deliveries
+Disallow: /login
+Disallow: /register
+Disallow: /password/
+
+Sitemap: https://mailflusher.com/sitemap.xml

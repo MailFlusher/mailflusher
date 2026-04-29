@@ -1,0 +1,505 @@
+<?php
+
+namespace Tests\Feature\Api;
+
+use App\Models\Alias;
+use App\Models\Domain;
+use App\Models\Recipient;
+use App\Notifications\Account\CustomVerifyEmail;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+class RecipientsTest extends TestCase
+{
+    use LazilyRefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        parent::setUpSanctum();
+    }
+
+    #[Test]
+    public function user_can_get_all_recipients()
+    {
+        // Arrange
+        Recipient::factory()->count(3)->create([
+            'user_id' => $this->user->id,
+        ]);
+
+        // Act
+        $response = $this->json('GET', '/api/v1/recipients');
+
+        // Assert
+        $response->assertSuccessful();
+        $this->assertArrayHasKey('aliases_count', $response->json()['data'][0]);
+        $this->assertCount(4, $response->json()['data']);
+    }
+
+    #[Test]
+    public function user_can_get_individual_recipient()
+    {
+        // Arrange
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+
+        // Act
+        $response = $this->json('GET', '/api/v1/recipients/'.$recipient->id);
+
+        // Assert
+        $response->assertSuccessful();
+        $this->assertCount(1, $response->json());
+        $this->assertEquals($recipient->email, $response->json()['data']['email']);
+        $this->assertArrayHasKey('aliases_count', $response->json()['data']);
+    }
+
+    #[Test]
+    public function recipients_index_omits_alias_count_when_filter_alias_count_is_false()
+    {
+        Recipient::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->json('GET', '/api/v1/recipients?filter[alias_count]=false');
+
+        $response->assertSuccessful();
+        $this->assertArrayNotHasKey('aliases_count', $response->json()['data'][0]);
+    }
+
+    #[Test]
+    public function recipients_index_alias_count_excludes_soft_deleted_aliases(): void
+    {
+        $recipient = Recipient::factory()->create(['user_id' => $this->user->id]);
+        $activeAlias = Alias::factory()->create(['user_id' => $this->user->id]);
+        $deletedAlias = Alias::factory()->create(['user_id' => $this->user->id]);
+        $activeAlias->recipients()->attach($recipient->id);
+        $deletedAlias->recipients()->attach($recipient->id);
+        $deletedAlias->delete();
+
+        $response = $this->json('GET', '/api/v1/recipients');
+
+        $response->assertSuccessful();
+        $row = collect($response->json('data'))->firstWhere('id', $recipient->id);
+        $this->assertNotNull($row);
+        $this->assertSame(1, (int) $row['aliases_count']);
+    }
+
+    #[Test]
+    public function recipient_show_omits_alias_count_when_filter_alias_count_is_false()
+    {
+        $recipient = Recipient::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->json('GET', '/api/v1/recipients/'.$recipient->id.'?filter[alias_count]=false');
+
+        $response->assertSuccessful();
+        $this->assertArrayNotHasKey('aliases_count', $response->json()['data']);
+    }
+
+    #[Test]
+    public function user_can_create_new_recipient()
+    {
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'mrunknown@example.com',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals('mrunknown@example.com', $response->getData()->data->email);
+    }
+
+    #[Test]
+    public function user_can_create_auto_verified_recipient()
+    {
+        Notification::fake();
+
+        Notification::assertNothingSent();
+
+        config(['mailflusher.auto_verify_new_recipients' => true]);
+
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'mrunknown@example.com',
+        ]);
+
+        $response->assertCreated();
+
+        $recipient = Recipient::find($response->json('data.id'));
+
+        $this->assertNotEmpty($recipient->email_verified_at);
+
+        Notification::assertNotSentTo(
+            $recipient,
+            CustomVerifyEmail::class
+        );
+    }
+
+    #[Test]
+    public function user_can_not_create_the_same_recipient()
+    {
+        Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'email' => 'mrunknown@example.com',
+        ]);
+
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'mrunknown@example.com',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    #[Test]
+    public function user_can_not_create_the_same_recipient_in_uppercase()
+    {
+        Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'email' => 'mrunknown@example.com',
+        ]);
+
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'JOHNdoe@example.com',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    #[Test]
+    public function user_can_not_create_the_same_recipient_as_default()
+    {
+        $this->user->recipients()->save($this->user->defaultRecipient);
+
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => $this->user->email,
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    #[Test]
+    public function user_can_not_create_recipient_with_local_domain()
+    {
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'mrunknown@mailflusher.com',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    #[Test]
+    public function user_can_not_create_recipient_with_local_custom_domain()
+    {
+        Domain::factory()->create([
+            'user_id' => $this->user->id,
+            'domain' => 'example.com',
+            'domain_verified_at' => now(),
+        ]);
+
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'mrunknown@example.com',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    #[Test]
+    public function new_recipient_must_have_valid_email()
+    {
+        $response = $this->json('POST', '/api/v1/recipients', [
+            'email' => 'mrunknown@example.',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    #[Test]
+    public function user_can_delete_recipient()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertCount(1, $this->user->recipients);
+    }
+
+    #[Test]
+    public function user_can_not_delete_default_recipient()
+    {
+        $this->user->recipients()->save($this->user->defaultRecipient);
+
+        $defaultRecipient = $this->user->defaultRecipient;
+
+        $response = $this->json('DELETE', '/api/v1/recipients/'.$defaultRecipient->id);
+
+        $response->assertStatus(403);
+        $this->assertCount(1, $this->user->recipients);
+        $this->assertEquals($defaultRecipient->id, $this->user->defaultRecipient->id);
+    }
+
+    #[Test]
+    public function user_can_add_gpg_key_to_recipient()
+    {
+        $gnupg = new \gnupg;
+        $gnupg->deletekey('572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A');
+
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+
+        $response = $this->json('PATCH', '/api/v1/recipient-keys/'.$recipient->id, [
+            'key_data' => file_get_contents(base_path('tests/keys/MailFlusherPublicKey.asc')),
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertTrue($response->getData()->data->should_encrypt);
+    }
+
+    #[Test]
+    public function gpg_key_must_be_correct_format()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+
+        $response = $this->json('PATCH', '/api/v1/recipient-keys/'.$recipient->id, [
+            'key_data' => 'Invalid Key Data',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('key_data');
+    }
+
+    #[Test]
+    public function gpg_key_must_be_valid()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+
+        $response = $this->json('PATCH', '/api/v1/recipient-keys/'.$recipient->id, [
+            'key_data' => file_get_contents(base_path('tests/keys/InvalidMailFlusherPublicKey.asc')),
+        ]);
+
+        $response
+            ->assertStatus(404);
+    }
+
+    #[Test]
+    public function user_can_remove_gpg_key_from_recipient()
+    {
+        $gnupg = new \gnupg;
+        $gnupg->import(file_get_contents(base_path('tests/keys/MailFlusherPublicKey.asc')));
+
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'should_encrypt' => true,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/recipient-keys/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertNull($this->user->recipients()->find($recipient->id)->fingerprint);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->should_encrypt);
+    }
+
+    #[Test]
+    public function user_can_turn_on_encryption_for_recipient()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'should_encrypt' => false,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('POST', '/api/v1/encrypted-recipients/', [
+            'id' => $recipient->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(true, $response->getData()->data->should_encrypt);
+    }
+
+    #[Test]
+    public function user_can_turn_off_encryption_for_recipient()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'should_encrypt' => true,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/encrypted-recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->should_encrypt);
+    }
+
+    #[Test]
+    public function user_can_allow_recipient_to_send_or_reply()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'can_reply_send' => false,
+        ]);
+
+        $response = $this->json('POST', '/api/v1/allowed-recipients/', [
+            'id' => $recipient->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(true, $response->getData()->data->can_reply_send);
+    }
+
+    #[Test]
+    public function user_can_disallow_recipient_from_sending_or_replying()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'can_reply_send' => true,
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/allowed-recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->can_reply_send);
+    }
+
+    #[Test]
+    public function user_can_turn_on_inline_encryption()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'inline_encryption' => false,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('POST', '/api/v1/inline-encrypted-recipients/', [
+            'id' => $recipient->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(true, $response->getData()->data->inline_encryption);
+    }
+
+    #[Test]
+    public function user_can_turn_off_inline_encryption()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'inline_encryption' => true,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/inline-encrypted-recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->inline_encryption);
+    }
+
+    #[Test]
+    public function user_can_turn_on_protected_headers()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'protected_headers' => false,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('POST', '/api/v1/protected-headers-recipients/', [
+            'id' => $recipient->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(true, $response->getData()->data->protected_headers);
+    }
+
+    #[Test]
+    public function user_can_turn_off_protected_headers()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'protected_headers' => true,
+            'fingerprint' => '572CC2DC0B7AEE1F7DD46CED1D20EAE49FC5187A',
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/protected-headers-recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->protected_headers);
+    }
+
+    #[Test]
+    public function user_can_turn_on_remove_pgp_keys()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'remove_pgp_keys' => false,
+        ]);
+
+        $response = $this->json('POST', '/api/v1/remove-pgp-keys-recipients/', [
+            'id' => $recipient->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(true, $response->getData()->data->remove_pgp_keys);
+    }
+
+    #[Test]
+    public function user_can_turn_off_remove_pgp_keys()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'remove_pgp_keys' => true,
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/remove-pgp-keys-recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->remove_pgp_keys);
+    }
+
+    #[Test]
+    public function user_can_turn_on_remove_pgp_signatures()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'remove_pgp_signatures' => false,
+        ]);
+
+        $response = $this->json('POST', '/api/v1/remove-pgp-signatures-recipients/', [
+            'id' => $recipient->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(true, $response->getData()->data->remove_pgp_signatures);
+    }
+
+    #[Test]
+    public function user_can_turn_off_remove_pgp_signatures()
+    {
+        $recipient = Recipient::factory()->create([
+            'user_id' => $this->user->id,
+            'remove_pgp_signatures' => true,
+        ]);
+
+        $response = $this->json('DELETE', '/api/v1/remove-pgp-signatures-recipients/'.$recipient->id);
+
+        $response->assertStatus(204);
+        $this->assertFalse($this->user->recipients()->find($recipient->id)->remove_pgp_signatures);
+    }
+}

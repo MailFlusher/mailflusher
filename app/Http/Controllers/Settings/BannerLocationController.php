@@ -1,0 +1,17 @@
+<?php
+
+namespace App\Http\Controllers\Settings;
+
+use App\Http\Controllers\Controller;
+
+use App\Http\Requests\Settings\UpdateBannerLocationRequest;
+
+class BannerLocationController extends Controller
+{
+    public function update(UpdateBannerLocationRequest $request)
+    {
+        user()->update(['banner_location' => $request->banner_location]);
+
+        return back()->with(['flash' => 'Location Updated Successfully']);
+    }
+}
