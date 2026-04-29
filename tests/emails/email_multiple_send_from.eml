@@ -1,0 +1,29 @@
+Date: Mon, 06 Apr 2026 23:26:27 +0100 (CET)
+From: Kaktus <kaktus@mailflusher.com>
+To: <ebay+contact=ebay.com@mrunknown.mailflusher.com>, <ebay+support=ebay.com@mrunknown.mailflusher.com>
+Subject: Test Email
+X-MailFlusher-Dmarc-Allow: Yes
+Content-Type: multipart/mixed; boundary="----=_Part_53229_6621261756.6917057565537"
+
+------=_Part_53229_6621261756.6917057565537
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,<br>
+<br>
+This is a test email.<br>
+<br>
+Kaktus
+
+
+------=_Part_53229_6621261756.6917057565537
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,
+
+This is a test email.
+
+Kaktus
+
+------=_Part_53229_6621261756.6917057565537--

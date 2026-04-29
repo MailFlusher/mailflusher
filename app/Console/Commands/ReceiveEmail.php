@@ -1,0 +1,813 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Mail\ForwardEmail;
+use App\Mail\ReplyToEmail;
+use App\Mail\SendFromEmail;
+use App\Models\Alias;
+use App\Models\Domain;
+use App\Models\EmailData;
+use App\Models\OutboundMessage;
+use App\Models\Username;
+use App\Notifications\Email\DisallowedReplySendAttempt;
+use App\Notifications\Email\FailedDeliveryNotification;
+use App\Notifications\Account\NearBandwidthLimit;
+use App\Notifications\Email\SpamReplySendAttempt;
+use App\Services\GhostInbox;
+use App\Services\LeakAttributor;
+use App\Services\UserRuleChecker;
+use App\Services\WebhookDispatcher;
+use Egulias\EmailValidator\EmailValidator;
+use Egulias\EmailValidator\Validation\RFCValidation;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use ParagonIE\ConstantTime\Base32;
+use PhpMimeMailParser\Parser;
+use Ramsey\Uuid\Uuid;
+
+class ReceiveEmail extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'mailflusher:receive-email
+                            {file=stream : The file of the email}
+                            {--sender= : The sender of the email}
+                            {--recipient=* : The recipient of the email}
+                            {--local_part=* : The local part of the recipient}
+                            {--extension=* : The extension of the local part of the recipient}
+                            {--domain=* : The domain of the recipient}
+                            {--size= : The size of the email in bytes}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Receive email from postfix pipe';
+
+    protected $parser;
+
+    protected $senderFrom;
+
+    protected $size;
+
+    protected $rawEmail;
+
+    protected $user;
+
+    protected $alias;
+
+    protected $inboundAlias;
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        try {
+            $this->exitIfFromSelf();
+
+            $inboundAliases = $this->getInboundAliases();
+
+            $file = $this->argument('file');
+
+            $this->parser = $this->getParser($file);
+            $this->senderFrom = $this->getSenderFrom();
+
+            $inboundAliasCount = $inboundAliases->where('domain', '!=', 'unsubscribe.'.config('mailflusher.domain'))->count();
+
+            $this->size = $this->option('size') / ($inboundAliasCount ? $inboundAliasCount : 1);
+
+            foreach ($inboundAliases as $inboundAlias) {
+
+                $this->inboundAlias = $inboundAlias;
+                // Check if VERP bounce
+                if (substr($this->inboundAlias['email'], 0, 2) === 'b_') {
+                    if ($outboundMessageId = $this->getIdFromVerp($this->inboundAlias['email'])) {
+                        // Is a valid bounce
+                        $outboundMessage = OutboundMessage::with(['user', 'alias', 'recipient'])->find($outboundMessageId);
+
+                        if (is_null($outboundMessage)) {
+                            // Must have been more than 7 days
+                            Log::info('VERP outboundMessage not found');
+
+                            exit(0);
+                        }
+
+                        $bouncedAlias = $outboundMessage->alias;
+
+                        // If already bounced then forward to the user instead
+                        if (! $outboundMessage->bounced) {
+                            $this->handleBounce($outboundMessage);
+                        }
+
+                        if (in_array(strtolower($this->parser->getHeader('Auto-Submitted')), ['auto-replied', 'auto-generated']) && ! in_array($outboundMessage->email_type, ['R', 'S'])) {
+                            Log::info('VERP auto-response to forward/notification, username: '.$outboundMessage->user?->username.' outboundMessageID: '.$outboundMessageId);
+
+                            exit(0);
+                        }
+
+                        // If it is a notification then there is no alias so exit and log, may be an auto-reply to a notification.
+                        if (is_null($bouncedAlias)) {
+                            Log::info('VERP previously bounced/auto-response to notification, username: '.$outboundMessage->user?->username.' outboundMessageID: '.$outboundMessageId);
+
+                            exit(0);
+                        }
+
+                        // If it is not a bounce (could be auto-reply) then redirect to alias
+                        $this->inboundAlias['email'] = $bouncedAlias->email;
+                        $this->inboundAlias['local_part'] = $bouncedAlias->local_part;
+                        $this->inboundAlias['domain'] = $bouncedAlias->domain;
+                    }
+                }
+
+                // If a bounce that doesn't originate from this server, then we don't want to forward them (potential backscatter)
+                if ($this->option('sender') === 'MAILER-DAEMON' && Str::startsWith(strtolower($this->parser->getHeader('Content-Type')), 'multipart/report') && ! isset($outboundMessage)) {
+
+                    exit(0);
+                }
+
+                // First determine if the alias already exists in the database
+                if ($this->alias = Alias::firstWhere('email', $this->inboundAlias['local_part'].'@'.$this->inboundAlias['domain'])) {
+                    $this->user = $this->alias->user;
+
+                    if ($this->alias->aliasable_id) {
+                        $aliasable = $this->alias->aliasable;
+                    }
+                } else {
+                    // Does not exist, must be a standard, username or custom domain alias
+                    /** @var string|null $parentDomain */
+                    $parentDomain = collect(config('mailflusher.all_domains'))
+                        ->filter(function ($name) {
+                            return Str::endsWith($this->inboundAlias['domain'], '.'.$name);
+                        })
+                        ->first();
+
+                    if (! empty($parentDomain)) {
+                        // It is standard or username alias
+                        $subdomain = substr($this->inboundAlias['domain'], 0, strrpos($this->inboundAlias['domain'], '.'.$parentDomain)); // e.g. mrunknown
+
+                        if ($subdomain === 'unsubscribe') {
+                            $this->handleUnsubscribe();
+
+                            continue;
+                        }
+
+                        // Check if this is an username or standard alias
+                        if (! empty($subdomain)) {
+                            $username = Username::where('username', $subdomain)->first();
+                            $this->user = $username->user;
+                            $aliasable = $username;
+                        }
+                    } else {
+                        // It is a custom domain
+                        if ($customDomain = Domain::where('domain', $this->inboundAlias['domain'])->first()) {
+                            $this->user = $customDomain->user;
+                            $aliasable = $customDomain;
+                        }
+                    }
+
+                    if (! isset($this->user) && ! empty(config('mailflusher.admin_username'))) {
+                        $this->user = Username::where('username', config('mailflusher.admin_username'))->first()?->user;
+                    }
+                }
+
+                // If there is still no user or the user has no verified default recipient then continue.
+                if (! isset($this->user) || ! $this->user->hasVerifiedDefaultRecipient()) {
+                    continue;
+                }
+
+                $this->checkBandwidthLimit();
+
+                $this->checkRateLimit();
+
+                // Check whether this email is a reply/send from or a new email to be forwarded.
+                $destination = Str::replaceLast('=', '@', $this->inboundAlias['extension']);
+                $validEmailDestination = false;
+
+                if (App::environment('testing') ? filter_var($destination, FILTER_VALIDATE_EMAIL) : (new EmailValidator)->isValid($destination, new RFCValidation) || filter_var($destination, FILTER_VALIDATE_EMAIL)) {
+                    $validEmailDestination = $destination;
+                }
+
+                if ($validEmailDestination) {
+                    $verifiedRecipient = $this->user->getVerifiedRecipientByEmail($this->senderFrom);
+                } else {
+                    $verifiedRecipient = null;
+                }
+
+                $dmarcAllow = $this->parser->getHeader('X-MailFlusher-Dmarc-Allow');
+                $authResults = $this->parser->getHeader('X-MailFlusher-Authentication-Results');
+
+                if ($verifiedRecipient?->can_reply_send && $this->user->canReply()) {
+                    // Check if the Dmarc allow or spam headers are present from Rspamd
+                    if (! $dmarcAllow) {
+                        // Notify user and exit
+                        $verifiedRecipient->notify(new SpamReplySendAttempt($this->inboundAlias, $this->senderFrom, $authResults));
+
+                        exit(0);
+                    }
+
+                    // If the alias has toggle on "Only allow recipients directly attached to this alias to reply/send" then check if verifiedRecipient is directly attached to the alias
+                    if ($this->alias?->attached_recipients_only) {
+                        if (! $this->alias->verifiedRecipients()->pluck('recipients.id')->contains($verifiedRecipient->id)) {
+                            $verifiedRecipient->notify(new DisallowedReplySendAttempt($this->inboundAlias, $this->senderFrom, $authResults));
+
+                            exit(0);
+                        }
+                    }
+
+                    if ($this->parser->getHeader('In-Reply-To') && $this->alias) {
+                        $this->handleReply($validEmailDestination, $verifiedRecipient);
+                    } else {
+                        $this->handleSendFrom($aliasable ?? null, $validEmailDestination, $verifiedRecipient);
+                    }
+                } elseif ($verifiedRecipient?->can_reply_send === false) {
+                    // Notify user that they have not allowed this recipient to reply and send from aliases
+                    $verifiedRecipient->notify(new DisallowedReplySendAttempt($this->inboundAlias, $this->senderFrom, $authResults));
+
+                    exit(0);
+                } else {
+                    $this->handleForward($aliasable ?? null);
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->error('4.3.0 An error has occurred, please try again later.');
+
+            report($e);
+
+            exit(1);
+        }
+
+        return 0;
+    }
+
+    protected function handleUnsubscribe()
+    {
+        $alias = Alias::find($this->inboundAlias['local_part']);
+
+        if ($alias && $alias->user->isVerifiedRecipient($this->senderFrom) && $this->parser->getHeader('X-MailFlusher-Dmarc-Allow')) {
+            $alias->deactivate();
+        }
+    }
+
+    protected function handleReply($destination, $verifiedRecipient)
+    {
+        $emailData = new EmailData($this->parser, $this->option('sender'), $this->size, 'R');
+
+        // Check user rules and get rule IDs that have satisfied conditions
+        $ruleIdsAndActions = UserRuleChecker::getRuleIdsAndActionsForReplies($this->user, $emailData, $this->alias);
+        $ruleIds = null;
+
+        if (! empty($ruleIdsAndActions)) {
+            if (UserRuleChecker::shouldBlockEmail($ruleIdsAndActions)) {
+                $this->alias->increment('emails_blocked', 1, ['last_blocked' => now()]);
+
+                exit(0);
+            }
+
+            $ruleIds = array_keys($ruleIdsAndActions);
+        }
+
+        $message = new ReplyToEmail($this->user, $this->alias, $verifiedRecipient, $emailData, $ruleIds);
+
+        Mail::to($destination)->queue($message);
+    }
+
+    protected function handleSendFrom($aliasable, $destination, $verifiedRecipient)
+    {
+        if (is_null($this->alias)) {
+            $this->alias = $this->user->aliases()->create([
+                'email' => $this->inboundAlias['local_part'].'@'.$this->inboundAlias['domain'],
+                'local_part' => $this->inboundAlias['local_part'],
+                'domain' => $this->inboundAlias['domain'],
+                'aliasable_id' => $aliasable?->id,
+                'aliasable_type' => $aliasable ? 'App\\Models\\'.class_basename($aliasable) : null,
+                'description' => 'Created automatically by catch-all',
+            ]);
+
+            // Hydrate all alias fields
+            $this->alias->refresh();
+            $isNewAlias = true;
+        }
+
+        $emailData = new EmailData($this->parser, $this->option('sender'), $this->size, 'S');
+
+        // Check user rules and get rule IDs that have satisfied conditions
+        $ruleIdsAndActions = UserRuleChecker::getRuleIdsAndActionsForSends($this->user, $emailData, $this->alias);
+        $ruleIds = null;
+
+        if (! empty($ruleIdsAndActions)) {
+            if (UserRuleChecker::shouldBlockEmail($ruleIdsAndActions)) {
+                // If it is a new alias that has been created on the fly, delete it.
+                if ($isNewAlias ?? false) {
+                    $this->alias->forceDelete();
+                } else {
+                    $this->alias->increment('emails_blocked', 1, ['last_blocked' => now()]);
+                }
+
+                exit(0);
+            }
+
+            $ruleIds = array_keys($ruleIdsAndActions);
+        }
+
+        $message = new SendFromEmail($this->user, $this->alias, $verifiedRecipient, $emailData, $ruleIds);
+
+        Mail::to($destination)->queue($message);
+    }
+
+    protected function handleForward($aliasable)
+    {
+        if (is_null($this->alias)) {
+            // This is a new alias
+            $this->alias = new Alias([
+                'email' => $this->inboundAlias['local_part'].'@'.$this->inboundAlias['domain'],
+                'local_part' => $this->inboundAlias['local_part'],
+                'domain' => $this->inboundAlias['domain'],
+                'aliasable_id' => $aliasable?->id,
+                'aliasable_type' => $aliasable ? 'App\\Models\\'.class_basename($aliasable) : null,
+                'description' => 'Created automatically by catch-all',
+            ]);
+
+            if ($this->user->hasExceededNewAliasLimit()) {
+                $this->error('4.2.1 New aliases per hour limit exceeded for user.');
+
+                exit(1);
+            }
+
+            if ($this->inboundAlias['extension'] !== '') {
+                $this->alias->extension = $this->inboundAlias['extension'];
+
+                $keys = explode('.', $this->inboundAlias['extension']);
+
+                $recipientIds = $this->user
+                    ->recipients()
+                    ->select(['id', 'email_verified_at'])
+                    ->oldest()
+                    ->get()
+                    ->filter(function ($item, $key) use ($keys) {
+                        return in_array($key + 1, $keys) && ! is_null($item['email_verified_at']);
+                    })
+                    ->pluck('id')
+                    ->take(10)
+                    ->toArray();
+            }
+
+            $this->user->aliases()->save($this->alias);
+
+            // Hydrate all alias fields
+            $this->alias->refresh();
+
+            if (isset($recipientIds)) {
+                $this->alias->recipients()->sync($recipientIds);
+            }
+
+            $isNewAlias = true;
+        }
+
+        // Burner expiry: if this alias has passed its time limit or hit its email cap,
+        // stop forwarding. Mark the alias as expired (deactivate + stamp expired_at).
+        // 'bounce' on_expiry returns a temp-fail so Postfix bounces; 'discard' silently drops.
+        if ($this->alias->isExpired()) {
+            $this->alias->markExpired();
+
+            if ($this->alias->on_expiry === 'bounce') {
+                $this->error('5.1.6 Alias has expired.');
+                exit(1);
+            }
+
+            exit(0);
+        }
+
+        // Ghost inbox: if the alias is in ghost mode, encrypt + store in the user's
+        // vault and skip forwarding entirely. The server keeps only ciphertext.
+        if ($this->alias->ghost_mode && $this->user->canUseGhostInbox() && $this->user->hasGhostVault()) {
+            try {
+                app(GhostInbox::class)->store(
+                    $this->alias,
+                    $this->parser->getData(),
+                    $this->parser->getHeader('from') ?: $this->option('sender'),
+                    $this->parser->getHeader('subject'),
+                );
+                $this->alias->increment('emails_forwarded', 1, ['last_forwarded' => now()]);
+            } catch (\Throwable $e) {
+                Log::error('GhostInbox store failed, dropping mail', [
+                    'alias_id' => $this->alias->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            exit(0);
+        }
+
+        $emailData = new EmailData($this->parser, $this->option('sender'), $this->size);
+
+        // Check user rules and get rule IDs that have satisfied conditions
+        $ruleIdsAndActions = UserRuleChecker::getRuleIdsAndActionsForForwards($this->user, $emailData, $this->alias);
+        $ruleIds = null;
+
+        $recipientsToForwardTo = $this->alias->verifiedRecipientsOrDefault();
+
+        if (! empty($ruleIdsAndActions)) {
+            if (UserRuleChecker::shouldBlockEmail($ruleIdsAndActions)) {
+                // If it is a new alias that has been created on the fly, delete it.
+                if ($isNewAlias ?? false) {
+                    $this->alias->forceDelete();
+                } else {
+                    $this->alias->increment('emails_blocked', 1, ['last_blocked' => now()]);
+
+                    // Fire alias.blocked webhook (best-effort)
+                    try {
+                        app(WebhookDispatcher::class)->dispatch($this->user, 'alias.blocked', [
+                            'alias_id' => $this->alias->id,
+                            'alias_email' => $this->alias->email,
+                            'from' => $this->parser->getHeader('from') ?: $this->option('sender'),
+                            'subject' => $this->parser->getHeader('subject'),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::warning('WebhookDispatcher blocked failed', ['error' => $e->getMessage()]);
+                    }
+                }
+
+                exit(0);
+            }
+
+            $ruleIds = array_keys($ruleIdsAndActions);
+
+            $forwardToRecipientIds = UserRuleChecker::getRecipientIdsToForwardToFromRuleIdsAndActions($ruleIdsAndActions);
+
+            if (! empty($forwardToRecipientIds)) {
+                $ruleRecipients = $this->user->verifiedRecipients()->whereIn('id', $forwardToRecipientIds)->get();
+                if ($ruleRecipients->isNotEmpty()) {
+                    $recipientsToForwardTo = $ruleRecipients;
+                }
+            }
+        }
+
+        $recipientsToForwardTo->each(function ($aliasRecipient) use ($emailData, $ruleIds) {
+            $message = (new ForwardEmail($this->alias, $emailData, $aliasRecipient, false, $ruleIds));
+
+            Mail::to($aliasRecipient->email)->queue($message);
+        });
+
+        // Record the sender for leak attribution. Best-effort — never let
+        // analytics failures block delivery.
+        try {
+            $from = $this->parser->getHeader('from') ?: $this->option('sender');
+            app(LeakAttributor::class)->record($this->alias, $from);
+        } catch (\Throwable $e) {
+            Log::warning('LeakAttributor failed', ['alias_id' => $this->alias->id, 'error' => $e->getMessage()]);
+        }
+
+        // Fire alias.received webhook (best-effort)
+        try {
+            app(WebhookDispatcher::class)->dispatch($this->user, 'alias.received', [
+                'alias_id' => $this->alias->id,
+                'alias_email' => $this->alias->email,
+                'from' => $this->parser->getHeader('from') ?: $this->option('sender'),
+                'subject' => $this->parser->getHeader('subject'),
+                'size_bytes' => $this->size,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('WebhookDispatcher received failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    protected function handleBounce($outboundMessage)
+    {
+        // Collect the attachments
+        $attachments = collect($this->parser->getAttachments());
+
+        // Find the delivery report
+        $deliveryReport = $attachments->filter(function ($attachment) {
+            return $attachment->getContentType() === 'message/delivery-status';
+        })->first();
+
+        // Is not a bounce, may be an auto-reply so return
+        if (! $deliveryReport) {
+            return;
+        }
+
+        // Mark the outboundMessage as bounced
+        $outboundMessage->markAsBounced();
+
+        $dsn = $this->parseDeliveryStatus($deliveryReport->getMimePartStr());
+
+        // Get the bounced email address
+        $bouncedEmailAddress = isset($dsn['Final-recipient']) ? trim(Str::after($dsn['Final-recipient'], ';')) : null;
+
+        $remoteMta = isset($dsn['Remote-mta']) ? trim(Str::after($dsn['Remote-mta'], ';')) : '';
+
+        if (isset($dsn['Diagnostic-code']) && isset($dsn['Status'])) {
+            // Try to determine the bounce type, HARD, SPAM, SOFT
+            $bounceType = $this->getBounceType($dsn['Diagnostic-code'], $dsn['Status']);
+
+            $diagnosticCode = trim(Str::limit($dsn['Diagnostic-code'], 497));
+        } else {
+            $bounceType = null;
+            $diagnosticCode = null;
+        }
+
+        // To sort '5.7.1 (delivery not authorized, message refused)' as status
+        if ($status = $dsn['Status'] ?? null) {
+
+            if (Str::length($status) > 5) {
+                if (is_null($diagnosticCode)) {
+                    $diagnosticCode = trim(Str::substr($status, 5, 497));
+                }
+
+                $status = trim(Str::substr($status, 0, 5));
+            }
+        }
+
+        // Get the undelivered message
+        $undeliveredMessage = $attachments->filter(function ($attachment) {
+            return in_array($attachment->getContentType(), ['text/rfc822-headers', 'message/rfc822']);
+        })->first();
+
+        $undeliveredMessageHeaders = [];
+
+        if ($undeliveredMessage) {
+            $undeliveredMessageHeaders = $this->parseDeliveryStatus($undeliveredMessage->getMimePartStr());
+        }
+
+        // Get bounce user information
+        $user = $outboundMessage->user;
+        $alias = $outboundMessage->alias;
+        $recipient = $outboundMessage->recipient;
+        $emailType = $outboundMessage->getRawOriginal('email_type');
+
+        $isResend = ($undeliveredMessageHeaders['X-mailflusher-resend'] ?? null) === 'Yes';
+        $originalSender = $undeliveredMessageHeaders['X-mailflusher-original-sender'] ?? null;
+
+        if ($user) {
+            $failedDeliveryId = Uuid::uuid4();
+
+            if ($undeliveredMessage) {
+                // Store the undelivered message if enabled by user. Do not store email verification notifications.
+                if ($user->store_failed_deliveries && ! in_array($emailType, ['VR', 'VU'])) {
+                    $isStored = Storage::disk('local')->put("{$failedDeliveryId}.eml", $this->trimUndeliveredMessage($undeliveredMessage->getMimePartStr()));
+                }
+            }
+
+            $failedDelivery = $user->failedDeliveries()->create([
+                'id' => $failedDeliveryId,
+                'recipient_id' => $recipient->id ?? null,
+                'alias_id' => $alias->id ?? null,
+                'is_stored' => $isStored ?? false,
+                'resent' => $isResend, // If this is already a resend then do not allow further resend attempts
+                'bounce_type' => $bounceType,
+                'remote_mta' => $remoteMta ?? null,
+                'sender' => $originalSender,
+                'destination' => $bouncedEmailAddress,
+                'email_type' => $emailType,
+                'status' => $status ?? null,
+                'code' => $diagnosticCode,
+                'attempted_at' => $outboundMessage->created_at,
+            ]);
+
+            // Check the aliases failed deliveries
+            if ($alias) {
+                // Decrement the alias forward count due to failed delivery
+                if ($failedDelivery->getRawOriginal('email_type') === 'F' && $alias->emails_forwarded > 0) {
+                    $alias->decrement('emails_forwarded');
+                }
+
+                if ($failedDelivery->getRawOriginal('email_type') === 'R' && $alias->emails_replied > 0) {
+                    $alias->decrement('emails_replied');
+                }
+
+                if ($failedDelivery->getRawOriginal('email_type') === 'S' && $alias->emails_sent > 0) {
+                    $alias->decrement('emails_sent');
+                }
+            }
+        } else {
+            Log::info('User not found from outbound message, may have been deleted.');
+        }
+
+        // Check if the bounce is a Failed delivery notification and if so do not notify the user again
+        if (! in_array($emailType, ['FDN'])) {
+
+            $notifiable = $recipient?->email_verified_at ? $recipient : $user?->defaultRecipient;
+
+            // Notify user of failed delivery
+            if ($notifiable?->email_verified_at) {
+
+                $notifiable->notify(new FailedDeliveryNotification($alias->email ?? null, $originalSender, $undeliveredMessageHeaders['Subject'] ?? null, $failedDelivery?->is_stored, $user?->store_failed_deliveries, $recipient?->email));
+
+                Log::info('FDN '.$emailType.': '.$notifiable->email);
+            }
+        }
+
+        exit(0);
+    }
+
+    protected function checkBandwidthLimit()
+    {
+        if ($this->user->hasReachedBandwidthLimit()) {
+            $this->user->update(['reject_until' => now()->endOfMonth()]);
+
+            $this->error('4.2.1 Bandwidth limit exceeded for user. Please try again later.');
+
+            exit(1);
+        }
+
+        if ($this->user->nearBandwidthLimit() && ! Cache::has("user:{$this->user->id}:near-bandwidth")) {
+            $this->user->notify(new NearBandwidthLimit);
+
+            Cache::put("user:{$this->user->id}:near-bandwidth", now()->toDateTimeString(), now()->addDay());
+        }
+    }
+
+    protected function checkRateLimit()
+    {
+        Redis::throttle("user:{$this->user->id}:limit:emails")
+            ->allow(config('mailflusher.limit'))
+            ->every(3600)
+            ->then(
+                function () {},
+                function () {
+                    $this->user->update(['defer_until' => now()->addHour()]);
+
+                    $this->error('4.2.1 Rate limit exceeded for user. Please try again later.');
+
+                    exit(1);
+                }
+            );
+    }
+
+    protected function getInboundAliases()
+    {
+        return collect($this->option('recipient'))->map(function ($item, $key) {
+            return [
+                'email' => $item,
+                'local_part' => strtolower($this->option('local_part')[$key]),
+                'extension' => $this->option('extension')[$key],
+                'domain' => strtolower($this->option('domain')[$key]),
+            ];
+        });
+    }
+
+    protected function getParser($file)
+    {
+        $parser = new Parser;
+
+        // Fix some edge cases in from name e.g. "\" Mr Unknown \"" <mrunknown@example.com>
+        $parser->addMiddleware(function ($mimePart, $next) {
+            $part = $mimePart->getPart();
+
+            if (isset($part['headers']['from'])) {
+                $value = $part['headers']['from'];
+                $value = (is_array($value)) ? $value[0] : $value;
+
+                try {
+                    mailparse_rfc822_parse_addresses($value);
+                } catch (\Exception $e) {
+                    $part['headers']['from'] = str_replace('\\', '', $part['headers']['from']);
+                    $mimePart->setPart($part);
+                }
+            }
+
+            return $next($mimePart);
+        });
+
+        if ($file === 'stream') {
+            $fd = fopen('php://stdin', 'r');
+            $this->rawEmail = '';
+            while (! feof($fd)) {
+                $this->rawEmail .= fread($fd, 1024);
+            }
+            fclose($fd);
+            $parser->setText($this->rawEmail);
+        } else {
+            $parser->setPath($file);
+        }
+
+        return $parser;
+    }
+
+    protected function parseDeliveryStatus($deliveryStatus)
+    {
+        $lines = explode(PHP_EOL, $deliveryStatus);
+
+        $result = [];
+
+        foreach ($lines as $line) {
+            if (preg_match('#^([^\s.]*):\s*(.*)\s*#', $line, $matches)) {
+                $key = ucfirst(strtolower($matches[1]));
+
+                if (empty($result[$key])) {
+                    $result[$key] = trim($matches[2]);
+                }
+            } elseif (preg_match('/^\s+(.+)\s*/', $line) && isset($key)) {
+                $result[$key] .= ' '.$line;
+            }
+        }
+
+        return $result;
+    }
+
+    protected function trimUndeliveredMessage($message)
+    {
+        return Str::after($message, 'Content-Type: message/rfc822'.PHP_EOL.PHP_EOL);
+    }
+
+    protected function getBounceType($code, $status)
+    {
+        if (preg_match("/(:?mailbox|address|user|account|recipient|@).*(:?rejected|unknown|disabled|unavailable|invalid|inactive|not exist|does(n't| not) exist)|(:?rejected|unknown|unavailable|no|illegal|invalid|no such).*(:?mailbox|address|user|account|recipient|alias)|(:?address|user|recipient) does(n't| not) have .*(:?mailbox|account)|returned to sender|(:?auth).*(:?required)/i", $code)) {
+
+            // If the status starts with 4 then return soft instead of hard
+            if (Str::startsWith($status, '4')) {
+                return 'soft';
+            }
+
+            return 'hard';
+        }
+
+        if (preg_match('/(:?spam|unsolicited|blacklisting|blacklisted|blacklist|554|mail content denied|reject for policy reason|mail rejected by destination domain|security issue)/i', $code)) {
+            return 'spam';
+        }
+
+        // No match for code but status starts with 5 e.g. 5.2.2
+        if (Str::startsWith($status, '5')) {
+            return 'hard';
+        }
+
+        return 'soft';
+    }
+
+    protected function getSenderFrom()
+    {
+        try {
+            // Ensure contains '@', may be malformed header which causes sends/replies to fail
+            $address = $this->parser->getAddresses('from')[0]['address'];
+
+            return Str::contains($address, '@') && filter_var($address, FILTER_VALIDATE_EMAIL) ? $address : $this->option('sender');
+        } catch (\Exception $e) {
+            return $this->option('sender');
+        }
+    }
+
+    protected function getIdFromVerp($verp)
+    {
+        $localPart = Str::beforeLast($verp, '@');
+
+        $parts = explode('_', $localPart);
+
+        if (count($parts) !== 3) {
+            Log::info('VERP invalid email: '.$verp);
+
+            return null;
+        }
+
+        try {
+            $id = Base32::decodeNoPadding($parts[1]);
+
+            $signature = Base32::decodeNoPadding($parts[2]);
+        } catch (\Exception $e) {
+            Log::info('VERP base32 decode failure: '.$verp.' '.$e->getMessage());
+
+            return null;
+        }
+
+        $expectedSignature = substr(hash_hmac('sha3-224', $id, config('mailflusher.secret')), 0, 8);
+
+        if ($signature !== $expectedSignature) {
+            Log::info('VERP invalid signature: '.$verp);
+
+            return null;
+        }
+
+        return $id;
+    }
+
+    protected function exitIfFromSelf()
+    {
+        // To prevent recipient alias infinite nested looping.
+        if (in_array($this->option('sender'), [config('mail.from.address'), config('mailflusher.return_path')])) {
+            exit(0);
+        }
+    }
+}

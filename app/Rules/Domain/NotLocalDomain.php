@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Rules\Domain;
+
+use Closure;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Str;
+
+class NotLocalDomain implements ValidationRule
+{
+    /**
+     * Indicates whether the rule should be implicit.
+     *
+     * @var bool
+     */
+    public $implicit = true;
+
+    /**
+     * Run the validation rule.
+     */
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
+        $count = collect(config('mailflusher.all_domains'))
+            ->filter(function ($domain) use ($value) {
+                return Str::endsWith(strtolower($value), '.'.$domain) || strtolower($value) === $domain;
+            })
+            ->count();
+
+        if ($count !== 0) {
+            $fail('The domain cannot be a local one.');
+        }
+    }
+}

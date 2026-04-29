@@ -1,0 +1,28 @@
+Date: Fri, 20 Feb 2026 10:35:14 +0100 (CET)
+From: Kaktus <kaktus@mailflusher.com>
+To: <ebay@mrunknown.mailflusher.com>, <amazon@mrunknown.mailflusher.com>, <paypal@mrunknown.mailflusher.com>
+Subject: Test Email
+Content-Type: multipart/mixed; boundary="----=_Part_42891_4011197225.8618685114939"
+
+------=_Part_42891_4011197225.8618685114939
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,<br>
+<br>
+This is a test email with multiple recipients.<br>
+<br>
+Kaktus
+
+
+------=_Part_42891_4011197225.8618685114939
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,
+
+This is a test email with multiple recipients.
+
+Kaktus
+
+------=_Part_42891_4011197225.8618685114939--

@@ -1,0 +1,126 @@
+<?php
+
+namespace App\Http\Requests\Rule;
+
+use App\Rules\General\ValidRegex;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreRuleRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+            'conditions' => [
+                'required',
+                'array',
+                'max:5',
+            ],
+            'conditions.*.type' => [
+                'required',
+                Rule::in([
+                    'subject',
+                    'sender',
+                    'alias',
+                    'alias_description',
+                ]),
+            ],
+            'conditions.*.match' => [
+                'required',
+                Rule::in([
+                    'is exactly',
+                    'is not',
+                    'contains',
+                    'does not contain',
+                    'starts with',
+                    'does not start with',
+                    'ends with',
+                    'does not end with',
+                ]),
+            ],
+            'conditions.*.values' => [
+                'required',
+                'array',
+                'min:1',
+                'max:50',
+            ],
+            'conditions.*.values.*' => Rule::forEach(function ($value, $attribute, $data) {
+                if (in_array(array_values($data)[1], ['matches regex', 'does not match regex'])) {
+                    return [
+                        new ValidRegex,
+                        'distinct',
+                    ];
+                }
+
+                return ['distinct'];
+            }),
+            'actions' => [
+                'required',
+                'array',
+                'max:5',
+            ],
+            'actions.*.type' => Rule::forEach(function ($value, $attribute, $data, $action) {
+                $rules = [
+                    'required',
+                    Rule::in([
+                        'subject',
+                        'displayFrom',
+                        'encryption',
+                        'banner',
+                        'block',
+                        'removeAttachments',
+                        'forwardTo',
+                        // 'webhook',
+                    ]),
+                ];
+
+                // If the action type is not forwardTo then do not allow duplicates
+                if ($action['type'] !== 'forwardTo') {
+                    $rules[] = 'distinct';
+                }
+
+                return $rules;
+            }),
+            'actions.*.value' => Rule::forEach(function ($value, $attribute, $data, $action) {
+                if ($action['type'] === 'forwardTo') {
+                    return [
+                        Rule::in(user()->verifiedRecipients()->pluck('id')->toArray()),
+                        'distinct',
+                    ]; // Must be a valid verified recipient
+                }
+
+                return [
+                    'required',
+                    'max:50',
+                ];
+            }),
+            'operator' => [
+                'required',
+                'in:AND,OR',
+            ],
+            'forwards' => 'boolean',
+            'replies' => 'boolean',
+            'sends' => 'boolean',
+        ];
+    }
+}
