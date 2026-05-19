@@ -3,20 +3,14 @@
 A privacy-first email aliasing and forwarding service. Live at [mailflusher.com](https://mailflusher.com), hosted in Germany.
 
 ---
+
 <p align="center">
-    <a href="https://github.com/MailFlusher/mailflusher">
-        <img src="https://img.shields.io/github/languages/code-size/MailFlusher/mailflusher.svg" alt="Code Size" />
-    </a>
-    <a href="https://github.com/MailFlusher/mailflusher/actions/workflows/github-code-scanning/codeql">
-        <img src="https://github.com/MailFlusher/mailflusher/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL" />
-    </a>
-    <a href="https://github.com/MailFlusher/mailflusher">
-        <img src="https://badgen.net/github/stars/MailFlusher/mailflusher" alt="GitHub stars" />
-    </a>
-    <a href="./LICENSE.md">
-        <img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="AGPL v3" />
-    </a>
+    <a href="https://github.com/MailFlusher/mailflusher"><img src="https://img.shields.io/github/languages/code-size/MailFlusher/mailflusher.svg" alt="Code Size" /></a>
+    <a href="https://github.com/MailFlusher/mailflusher/actions/workflows/github-code-scanning/codeql"><img src="https://github.com/MailFlusher/mailflusher/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL" /></a>
+    <a href="https://github.com/MailFlusher/mailflusher"><img src="https://badgen.net/github/stars/MailFlusher/mailflusher" alt="GitHub stars" /></a>
+    <a href="./LICENSE.md"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="AGPL v3" /></a>
 </p>
+
 ---
 
 ## Origin
