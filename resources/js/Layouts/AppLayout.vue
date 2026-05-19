@@ -414,6 +414,8 @@
         </div>
       </header>
 
+      <TrialBanner />
+
       <!-- Page content -->
       <main class="py-8 px-4 sm:px-6 lg:px-8">
         <div class="max-w-screen-xl mx-auto">
@@ -477,6 +479,7 @@ import { CheckIcon, ChevronDownIcon } from '@heroicons/vue/20/solid'
 import FlashNotification from './../Components/FlashNotification.vue'
 import UsageIndicator from './../Components/UsageIndicator.vue'
 import UpgradeCard from './../Components/UpgradeCard.vue'
+import TrialBanner from './../Components/TrialBanner.vue'
 
 const props = defineProps({
   search: {

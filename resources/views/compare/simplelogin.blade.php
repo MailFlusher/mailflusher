@@ -139,12 +139,12 @@
                         </tr>
                         <tr>
                             <td class="px-6 py-3 font-medium text-grey-700">Server location</td>
-                            <td class="text-center px-6 py-3">Sweden (EU)</td>
+                            <td class="text-center px-6 py-3">Germany (EU)</td>
                             <td class="text-center px-6 py-3">Switzerland / Germany</td>
                         </tr>
                         <tr>
                             <td class="px-6 py-3 font-medium text-grey-700">Owned by</td>
-                            <td class="text-center px-6 py-3">Independent (Sweden)</td>
+                            <td class="text-center px-6 py-3">Independent (Germany)</td>
                             <td class="text-center px-6 py-3">Proton AG (Switzerland)</td>
                         </tr>
                         <tr>
@@ -215,7 +215,7 @@
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-2xl font-bold text-grey-900 mb-6">Where {{ config('app.name', 'MailFlusher') }} is stronger</h2>
             <div class="space-y-4 text-grey-700">
-                <p><strong class="text-grey-900">EU jurisdiction.</strong> We operate entirely from Sweden under GDPR. No US subsidiary, no CLOUD Act exposure. SimpleLogin is also outside the US, but our single-jurisdiction Swedish footprint is simpler to reason about.</p>
+                <p><strong class="text-grey-900">EU jurisdiction.</strong> We operate entirely from Germany under GDPR. No US subsidiary, no CLOUD Act exposure. SimpleLogin is also outside the US, but our single-jurisdiction German footprint is simpler to reason about.</p>
                 <p><strong class="text-grey-900">Monthly billing.</strong> Our Standard plan is €1/month and Pro is €5/month — month-to-month. SimpleLogin Premium is annual-only at ~$30/year.</p>
                 <p><strong class="text-grey-900">Deep power-user feature set.</strong> Advanced filtering rules, per-alias recipient routing, auto-create regex, multiple usernames for compartmentalization — {{ config('app.name', 'MailFlusher') }} was originally based on Addy.io, inheriting its reputation as one of the most customizable alias services on the market, and has been heavily extended since.</p>
                 <p><strong class="text-grey-900">Burner aliases, leak attribution, and tracker stripping.</strong> {{ config('app.name', 'MailFlusher') }} ships three privacy features SimpleLogin doesn't offer today: auto-expiring "burner" aliases (by time or email count), per-alias leak detection that flags when an unexpected sender shows up on an alias you only ever gave to one brand, and an opt-in pixel + link-proxy tracker stripper that removes 1×1 tracking images and rewrites UTM/click-tracker parameters before they reach your inbox.</p>
@@ -240,7 +240,7 @@
 
     <footer class="bg-grey-900 text-grey-400 py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
-            <p>&copy; {{ date('Y') }} {{ config('app.name', 'MailFlusher') }}. Hosted in Sweden, EU. &middot; <a href="/privacy" class="hover:text-white">Privacy</a> &middot; <a href="/terms" class="hover:text-white">Terms</a> &middot; <a href="/help" class="hover:text-white">Help</a></p>
+            <p>&copy; {{ date('Y') }} {{ config('app.name', 'MailFlusher') }}. Hosted in Germany, EU. &middot; <a href="/privacy" class="hover:text-white">Privacy</a> &middot; <a href="/terms" class="hover:text-white">Terms</a> &middot; <a href="/help" class="hover:text-white">Help</a></p>
         </div>
     </footer>
 

@@ -109,6 +109,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trial
+    |--------------------------------------------------------------------------
+    |
+    | New users who verify their email get a free trial of the configured plan
+    | for the configured duration. `enabled = false` turns off all new grants
+    | (existing trials are not yanked). `reminder_days` are the day thresholds
+    | at which the user is emailed before expiry.
+    |
+    */
+
+    'trial' => [
+        'enabled' => (bool) env('TRIAL_ENABLED', true),
+        'plan' => env('TRIAL_PLAN', 'pro'),
+        'duration_days' => (int) env('TRIAL_DURATION_DAYS', 7),
+        'reminder_days' => [7, 3, 1],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Version
     |--------------------------------------------------------------------------
     |

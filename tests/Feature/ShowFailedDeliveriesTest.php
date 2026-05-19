@@ -21,6 +21,7 @@ class ShowFailedDeliveriesTest extends TestCase
 
         $this->user = $this->createUser();
         $this->actingAs($this->user);
+        $this->user->update(['plan' => 'pro']);
     }
 
     #[Test]

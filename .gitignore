@@ -51,3 +51,4 @@ Thumbs.db
 /vendor
 vite.config.*.timestamp-*
 yarn-error.log
+storage/app/postfix_log_position.txt

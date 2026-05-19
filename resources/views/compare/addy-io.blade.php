@@ -55,7 +55,7 @@
                 <div>
                     <h2 class="text-base font-semibold text-amber-900 mb-2">Full disclosure</h2>
                     <p class="text-sm text-amber-800 leading-relaxed">
-                        {{ config('app.name', 'MailFlusher') }} began from the <a href="https://addy.io" class="underline">Addy.io</a> (formerly AnonAddy) codebase — an excellent self-hostable alias service originally created by Will Browning. We credit that lineage openly. Since then we've made substantial modifications on top of it to build our own product: Swedish hosting, our own pricing, a different roadmap (Chrome/Firefox extensions and a mobile app in development), and a different focus. If you'd rather use the original or self-host, Addy.io is great software and we recommend it.
+                        {{ config('app.name', 'MailFlusher') }} began from the <a href="https://addy.io" class="underline">Addy.io</a> (formerly AnonAddy) codebase — an excellent self-hostable alias service originally created by Will Browning. We credit that lineage openly. Since then we've made substantial modifications on top of it to build our own product: German hosting, our own pricing, a different roadmap (Chrome/Firefox extensions and a mobile app in development), and a different focus. If you'd rather use the original or self-host, Addy.io is great software and we recommend it.
                     </p>
                 </div>
             </div>
@@ -69,7 +69,7 @@
                 <div class="bg-white border border-indigo-200 rounded-lg p-6">
                     <h2 class="text-lg font-bold text-indigo-700 mb-3">Pick {{ config('app.name', 'MailFlusher') }} if…</h2>
                     <ul class="text-sm text-grey-700 space-y-2 list-disc pl-5">
-                        <li>You want a hosted service based in Sweden / EU rather than the UK.</li>
+                        <li>You want a hosted service based in Germany / EU rather than the UK.</li>
                         <li>You prefer monthly billing over annual.</li>
                         <li>You want a straightforward hosted product — no server setup, no self-host maintenance.</li>
                         <li>You want a simpler 3-tier price ladder (Free, €1, €5).</li>
@@ -167,7 +167,7 @@
                         </tr>
                         <tr>
                             <td class="px-6 py-3 font-medium text-grey-700">Hosting location</td>
-                            <td class="text-center px-6 py-3">Sweden (EU)</td>
+                            <td class="text-center px-6 py-3">Germany (EU)</td>
                             <td class="text-center px-6 py-3">United Kingdom</td>
                         </tr>
                         <tr>
@@ -239,7 +239,7 @@
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-2xl font-bold text-grey-900 mb-6">Where {{ config('app.name', 'MailFlusher') }} is stronger</h2>
             <div class="space-y-4 text-grey-700">
-                <p><strong class="text-grey-900">EU-based hosting and governance.</strong> All servers in Sweden, all processing under EU GDPR. Post-Brexit, Addy.io is under UK data-protection law, which is diverging from the EU regime. If strict EU residency matters to you, we're the cleaner choice.</p>
+                <p><strong class="text-grey-900">EU-based hosting and governance.</strong> All servers in Germany, all processing under EU GDPR. Post-Brexit, Addy.io is under UK data-protection law, which is diverging from the EU regime. If strict EU residency matters to you, we're the cleaner choice.</p>
                 <p><strong class="text-grey-900">Simpler pricing.</strong> Three plans, clear limits, monthly euros. No regional pricing confusion, no annual-only tiers to weigh.</p>
                 <p><strong class="text-grey-900">Dedicated brand and focus.</strong> We're a hosted-only product built for people who don't want to run their own servers. One clean flow from sign-up to alias to reply.</p>
                 <p><strong class="text-grey-900">First-party clients on the roadmap.</strong> Official {{ config('app.name', 'MailFlusher') }}-branded Chrome and Firefox extensions plus a mobile app are in active development. Once shipped they'll be tightly integrated with our service rather than a generic Addy.io client.</p>
@@ -252,7 +252,7 @@
     <section class="py-16 bg-indigo-600">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 class="text-2xl font-bold text-white mb-4">Try {{ config('app.name', 'MailFlusher') }} free — no card required</h2>
-            <p class="text-white/90 mb-8">Built on Addy.io foundations, heavily modified, hosted in Sweden. If you'd rather run the original yourself, Addy.io has great self-host docs — either way you're getting excellent software.</p>
+            <p class="text-white/90 mb-8">Built on Addy.io foundations, heavily modified, hosted in Germany. If you'd rather run the original yourself, Addy.io has great self-host docs — either way you're getting excellent software.</p>
             @if (config('mailflusher.enable_registration'))
                 <a href="{{ config('app.url') }}/register" class="inline-flex items-center justify-center rounded-md bg-cyan-400 hover:bg-cyan-300 text-cyan-900 px-8 py-3 font-bold shadow-lg">
                     Get started for free
@@ -264,7 +264,7 @@
 
     <footer class="bg-grey-900 text-grey-400 py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
-            <p>&copy; {{ date('Y') }} {{ config('app.name', 'MailFlusher') }}. Hosted in Sweden, EU. &middot; <a href="/privacy" class="hover:text-white">Privacy</a> &middot; <a href="/terms" class="hover:text-white">Terms</a> &middot; <a href="/help" class="hover:text-white">Help</a></p>
+            <p>&copy; {{ date('Y') }} {{ config('app.name', 'MailFlusher') }}. Hosted in Germany, EU. &middot; <a href="/privacy" class="hover:text-white">Privacy</a> &middot; <a href="/terms" class="hover:text-white">Terms</a> &middot; <a href="/help" class="hover:text-white">Help</a></p>
         </div>
     </footer>
 

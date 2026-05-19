@@ -4,8 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DisplayFromFormat;
 use App\Enums\ListUnsubscribeBehaviour;
-use App\Exports\AliasesExport;
-use App\Imports\AliasesImport;
+use App\Jobs\ImportAliasesJob;
 use App\Models\Alias;
 use App\Models\AliasRecipient;
 use App\Models\DeletedUsername;
@@ -16,10 +15,11 @@ use App\Notifications\Account\CustomVerifyEmail;
 use App\Notifications\Account\DefaultRecipientUpdated;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
-use Maatwebsite\Excel\Facades\Excel;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -837,7 +837,7 @@ class SettingsTest extends TestCase
     #[Test]
     public function user_can_import_aliases_for_custom_domains()
     {
-        Excel::fake();
+        Bus::fake();
 
         Domain::factory()->create([
             'user_id' => $this->user->id,
@@ -845,6 +845,7 @@ class SettingsTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)
+            ->withoutMiddleware(ThrottleRequestsWithRedis::class)
             ->post('/settings/aliases/import', [
                 'aliases_import' => new UploadedFile(base_path('tests/files/import-aliases-template.csv'), 'import-aliases-template.csv', 'csv', null, true),
             ]);
@@ -853,16 +854,15 @@ class SettingsTest extends TestCase
 
         $response->assertSessionDoesntHaveErrors(['aliases_import']);
 
-        Excel::assertQueued('import-aliases-template.csv', function (AliasesImport $import) {
-            return $import->getDomains()->first()->domain === 'example.com' && $import->getRecipientIds()[0] === $this->user->default_recipient_id;
+        Bus::assertDispatched(ImportAliasesJob::class, function (ImportAliasesJob $job) {
+            return $job->getDomains()->first()->domain === 'example.com'
+                && $job->getRecipientIds()[0] === $this->user->default_recipient_id;
         });
     }
 
     #[Test]
     public function user_can_download_aliases_export()
     {
-        Excel::fake();
-
         Alias::factory()->count(3)->create([
             'user_id' => $this->user->id,
         ]);
@@ -875,15 +875,27 @@ class SettingsTest extends TestCase
 
         Alias::factory()->create();
 
-        $this->actingAs($this->user)
+        $response = $this->actingAs($this->user)
             ->get('/settings/aliases/export');
 
-        Excel::assertDownloaded('aliases-'.now()->toDateString().'.csv', function (AliasesExport $export) {
-            $this->assertCount(4, $export->collection());
+        $response->assertStatus(200);
+        $this->assertStringStartsWith('text/csv', $response->headers->get('content-type'));
+        $response->assertDownload('aliases-'.now()->toDateString().'.csv');
 
-            return $export->collection()->contains(function ($alias) {
-                return $alias['user_id'] === $this->user->id;
-            });
-        });
+        $rows = array_filter(
+            explode("\n", trim($response->streamedContent())),
+            fn ($line) => $line !== ''
+        );
+
+        $this->assertCount(5, $rows); // header + 4 aliases (3 active + 1 soft-deleted) for this user
+
+        $header = str_getcsv($rows[0], escape: '\\');
+        $this->assertContains('user_id', $header);
+
+        $userIdIndex = array_search('user_id', $header);
+        foreach (array_slice($rows, 1) as $row) {
+            $parsed = str_getcsv($row, escape: '\\');
+            $this->assertSame($this->user->id, $parsed[$userIdIndex]);
+        }
     }
 }

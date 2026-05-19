@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Privacy Policy — {{ config('app.name', 'MailFlusher') }}</title>
-    <meta name="description" content="Privacy Policy for {{ config('app.name', 'MailFlusher') }}. Learn how we handle your data. Hosted in Sweden, EU. GDPR compliant.">
+    <meta name="description" content="Privacy Policy for {{ config('app.name', 'MailFlusher') }}. Learn how we handle your data. Hosted in Germany, EU. GDPR compliant.">
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -40,7 +40,7 @@
                 <section>
                     <h2 class="text-xl font-semibold text-grey-900 mb-3">1. Introduction</h2>
                     <p class="text-grey-700 leading-relaxed">
-                        {{ config('app.name', 'MailFlusher') }} ("we", "our", "us") is an email forwarding service operated from Sweden, within the European Union. We are committed to protecting your privacy and handling your personal data in accordance with the EU General Data Protection Regulation (GDPR).
+                        {{ config('app.name', 'MailFlusher') }} ("we", "our", "us") is an email forwarding service operated from Germany, within the European Union. We are committed to protecting your privacy and handling your personal data in accordance with the EU General Data Protection Regulation (GDPR).
                     </p>
                     <p class="text-grey-700 leading-relaxed mt-3">
                         This Privacy Policy explains what data we collect, why we collect it, how we use it, and your rights regarding your personal data.
@@ -121,7 +121,7 @@
                 <section>
                     <h2 class="text-xl font-semibold text-grey-900 mb-3">4. Data Storage & Security</h2>
                     <p class="text-grey-700 leading-relaxed">
-                        All data is stored on servers located in <strong>Sweden, European Union</strong>. Your data never leaves the EU.
+                        All data is stored on servers located in <strong>Germany, European Union</strong>. Your data never leaves the EU.
                     </p>
                     <p class="text-grey-700 leading-relaxed mt-3">
                         We use industry-standard security measures including:

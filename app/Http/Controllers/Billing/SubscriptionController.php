@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
-
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -48,30 +47,11 @@ class SubscriptionController extends Controller
 
     public function success(Request $request)
     {
-        $sessionId = $request->get('session_id');
-
-        if ($sessionId) {
-            $stripe = new \Stripe\StripeClient(config('cashier.secret'));
-            $session = $stripe->checkout->sessions->retrieve($sessionId);
-
-            if ($session->subscription) {
-                $subscription = $stripe->subscriptions->retrieve($session->subscription);
-                $priceId = $subscription->items->data[0]->price->id ?? null;
-
-                // Map price ID to plan name
-                $planName = 'free';
-                foreach (config('mailflusher.plans') as $key => $plan) {
-                    if (isset($plan['stripe_price_id']) && $plan['stripe_price_id'] === $priceId) {
-                        $planName = $key;
-                        break;
-                    }
-                }
-
-                user()->update(['plan' => $planName, 'plan_expires_at' => null]);
-            }
-        }
-
-        return redirect()->route('subscription.index')->with('flash', 'Subscription activated successfully!');
+        // Plan activation is owned by the Stripe webhook (handleCustomerSubscriptionUpdated).
+        // This endpoint is just the user-facing thank-you redirect; doing the work
+        // here too would race with the webhook and bypass PlanService audit logging.
+        return redirect()->route('subscription.index')
+            ->with('flash', 'Thanks! Your subscription is being activated. It may take a moment to show up.');
     }
 
     public function cancel()

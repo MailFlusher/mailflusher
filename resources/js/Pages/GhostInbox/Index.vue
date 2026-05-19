@@ -4,7 +4,9 @@
 
     <!-- Paywall -->
     <div v-if="!canUseGhostInbox" class="max-w-3xl mx-auto">
-      <div class="rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 to-cyan-50 p-8 text-center">
+      <div
+        class="rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 to-cyan-50 p-8 text-center"
+      >
         <h1 class="text-2xl font-bold text-grey-900 mb-2">Ghost Inbox is a Pro feature</h1>
         <p class="text-grey-700 mb-6">
           Put any alias in "ghost mode" and incoming mail is encrypted with your vault key and
@@ -48,7 +50,8 @@
           <span
             v-if="!unlocked"
             class="inline-flex items-center rounded-full bg-grey-100 dark:bg-grey-800 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-grey-600 dark:text-grey-300"
-          >Locked</span>
+            >Locked</span
+          >
           <button
             v-if="unlocked"
             @click="lockNow"
@@ -85,13 +88,21 @@
               ]"
             >
               <p class="text-sm font-semibold text-grey-900 dark:text-white truncate">
-                <template v-if="fullHeaders[email.id]?.from">{{ fullHeaders[email.id].from }}</template>
-                <template v-else-if="email.from_preview">{{ email.from_preview }}<span class="text-grey-400">…</span></template>
+                <template v-if="fullHeaders[email.id]?.from">{{
+                  fullHeaders[email.id].from
+                }}</template>
+                <template v-else-if="email.from_preview"
+                  >{{ email.from_preview }}<span class="text-grey-400">…</span></template
+                >
                 <template v-else>Encrypted sender</template>
               </p>
               <p class="text-xs text-grey-500 dark:text-grey-400 truncate">
-                <template v-if="fullHeaders[email.id]?.subject">{{ fullHeaders[email.id].subject }}</template>
-                <template v-else-if="email.subject_preview">{{ email.subject_preview }}<span class="text-grey-400">…</span></template>
+                <template v-if="fullHeaders[email.id]?.subject">{{
+                  fullHeaders[email.id].subject
+                }}</template>
+                <template v-else-if="email.subject_preview"
+                  >{{ email.subject_preview }}<span class="text-grey-400">…</span></template
+                >
                 <template v-else>Encrypted subject</template>
               </p>
               <p class="text-[11px] text-grey-400 dark:text-grey-500 mt-1">
@@ -101,12 +112,7 @@
           </div>
 
           <!-- Viewer -->
-          <div
-            :class="[
-              'lg:col-span-2',
-              selectedEmail ? '' : 'hidden lg:block',
-            ]"
-          >
+          <div :class="['lg:col-span-2', selectedEmail ? '' : 'hidden lg:block']">
             <div v-if="!selectedEmail" class="text-center py-16 text-grey-500 dark:text-grey-400">
               Pick an email to decrypt and read.
             </div>
@@ -114,23 +120,47 @@
               v-else
               class="bg-white dark:bg-grey-900 rounded-xl border border-grey-200 dark:border-grey-700 p-0 overflow-hidden"
             >
-              <div class="px-4 py-3 border-b border-grey-100 dark:border-grey-700 flex items-center justify-between gap-2">
+              <div
+                class="px-4 py-3 border-b border-grey-100 dark:border-grey-700 flex items-center justify-between gap-2"
+              >
                 <button
                   @click="closeEmail"
                   class="lg:hidden -ml-2 p-1 text-grey-500 hover:text-grey-900"
                   aria-label="Back"
                 >
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15.75 19.5L8.25 12l7.5-7.5"
+                    />
+                  </svg>
                 </button>
                 <div class="min-w-0 flex-1">
                   <p class="text-sm font-semibold text-grey-900 dark:text-white truncate">
-                    <template v-if="fullHeaders[selectedEmail.id]?.subject">{{ fullHeaders[selectedEmail.id].subject }}</template>
-                    <template v-else-if="selectedEmail.subject_preview">{{ selectedEmail.subject_preview }}<span class="text-grey-400">…</span></template>
+                    <template v-if="fullHeaders[selectedEmail.id]?.subject">{{
+                      fullHeaders[selectedEmail.id].subject
+                    }}</template>
+                    <template v-else-if="selectedEmail.subject_preview"
+                      >{{ selectedEmail.subject_preview
+                      }}<span class="text-grey-400">…</span></template
+                    >
                     <template v-else>Encrypted subject</template>
                   </p>
                   <p class="text-xs text-grey-500 dark:text-grey-400 truncate">
-                    <template v-if="fullHeaders[selectedEmail.id]?.from">{{ fullHeaders[selectedEmail.id].from }}</template>
-                    <template v-else-if="selectedEmail.from_preview">{{ selectedEmail.from_preview }}<span class="text-grey-400">…</span></template>
+                    <template v-if="fullHeaders[selectedEmail.id]?.from">{{
+                      fullHeaders[selectedEmail.id].from
+                    }}</template>
+                    <template v-else-if="selectedEmail.from_preview"
+                      >{{ selectedEmail.from_preview
+                      }}<span class="text-grey-400">…</span></template
+                    >
                     <template v-else>Encrypted sender</template>
                     · {{ formatDate(selectedEmail.received_at) }}
                   </p>
@@ -138,12 +168,17 @@
                 <button
                   @click="deleteEmail(selectedEmail)"
                   class="text-xs text-red-600 hover:text-red-500 font-medium shrink-0"
-                >Delete</button>
+                >
+                  Delete
+                </button>
               </div>
               <div v-if="!unlocked" class="p-6">
-                <h3 class="text-sm font-semibold text-grey-900 dark:text-white mb-1">Unlock vault to read</h3>
+                <h3 class="text-sm font-semibold text-grey-900 dark:text-white mb-1">
+                  Unlock vault to read
+                </h3>
                 <p class="text-xs text-grey-500 dark:text-grey-400 mb-4">
-                  Enter your passphrase to decrypt this email. The passphrase never leaves this device.
+                  Enter your passphrase to decrypt this email. The passphrase never leaves this
+                  device.
                 </p>
                 <input
                   v-model="passphrase"
@@ -162,7 +197,9 @@
                   {{ unlockLoading ? 'Unlocking…' : 'Unlock' }}
                 </button>
               </div>
-              <div v-else-if="decryptError" class="p-4 text-sm text-red-600">{{ decryptError }}</div>
+              <div v-else-if="decryptError" class="p-4 text-sm text-red-600">
+                {{ decryptError }}
+              </div>
               <div v-else-if="decryptLoading" class="p-4 text-sm text-grey-500">Decrypting…</div>
               <template v-else-if="decrypted">
                 <div
@@ -178,7 +215,9 @@
                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
                         : 'text-grey-600 dark:text-grey-300 hover:bg-grey-50 dark:hover:bg-grey-800',
                     ]"
-                  >HTML</button>
+                  >
+                    HTML
+                  </button>
                   <button
                     @click="viewMode = 'text'"
                     :class="[
@@ -187,7 +226,9 @@
                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
                         : 'text-grey-600 dark:text-grey-300 hover:bg-grey-50 dark:hover:bg-grey-800',
                     ]"
-                  >Plain text</button>
+                  >
+                    Plain text
+                  </button>
                   <span class="ml-auto text-grey-400 dark:text-grey-500">
                     External images &amp; scripts blocked for privacy
                   </span>
@@ -201,7 +242,9 @@
                   v-if="attachments.length > 0"
                   class="px-4 py-3 border-t border-grey-100 dark:border-grey-700 bg-grey-50 dark:bg-grey-800"
                 >
-                  <p class="text-xs font-semibold uppercase tracking-wide text-grey-500 dark:text-grey-400 mb-2">
+                  <p
+                    class="text-xs font-semibold uppercase tracking-wide text-grey-500 dark:text-grey-400 mb-2"
+                  >
                     Attachments ({{ attachments.length }})
                   </p>
                   <ul class="space-y-1">
@@ -404,16 +447,17 @@ const openEmail = async email => {
     attachments.value = rendered.attachments || []
   } catch (e) {
     decryptError.value = e.message || 'Decryption failed.'
-  }
+  }yes
   decryptLoading.value = false
 }
 
 const isEmptyDocument = html => {
-  // Heuristic: strip tags and whitespace from the body region; treat as empty
-  // if there's nothing visible left.
-  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html || '')
-  const body = bodyMatch ? bodyMatch[1] : html || ''
-  return body.replace(/<[^>]+>/g, '').replace(/\s+/g, '').length === 0
+  // Heuristic: parse the HTML and inspect visible text content from <body>.
+  // Avoid regex-based multi-character sanitization when stripping tags.
+  const source = html || ''
+  const doc = new DOMParser().parseFromString(source, 'text/html')
+  const text = doc.body && doc.body.textContent ? doc.body.textContent : ''
+  return text.replace(/\s+/g, '').length === 0
 }
 
 const textIframeSrc = computed(() => rawFallbackHtml(decryptedText.value || ''))
@@ -422,7 +466,12 @@ const rawFallbackHtml = raw => {
   // Strip the top-level MIME headers if present so the user sees the body, not
   // the envelope. Otherwise just dump the raw string.
   let body = raw || ''
-  const sep = body.indexOf('\r\n\r\n') !== -1 ? body.indexOf('\r\n\r\n') + 4 : (body.indexOf('\n\n') !== -1 ? body.indexOf('\n\n') + 2 : 0)
+  const sep =
+    body.indexOf('\r\n\r\n') !== -1
+      ? body.indexOf('\r\n\r\n') + 4
+      : body.indexOf('\n\n') !== -1
+        ? body.indexOf('\n\n') + 2
+        : 0
   body = body.slice(sep)
   const escaped = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return `<!doctype html>
@@ -520,12 +569,15 @@ const parseMimePart = raw => {
   const headers = raw.slice(0, sepIdx === -1 ? 0 : sepIdx)
   const body = sepIdx === -1 ? raw : raw.slice(sepIdx + sepLen)
 
-  const contentType = (/content-type:\s*([^\r\n;]+)/i.exec(headers)?.[1] || 'text/plain').toLowerCase().trim()
+  const contentType = (/content-type:\s*([^\r\n;]+)/i.exec(headers)?.[1] || 'text/plain')
+    .toLowerCase()
+    .trim()
   const boundary = /boundary="?([^"\r\n;]+)"?/i.exec(headers)?.[1] || null
   const disposition = /content-disposition:\s*([^\r\n;]+)/i.exec(headers)?.[1]?.toLowerCase().trim()
   const filenameMatch = /filename="?([^"\r\n;]+)"?/i.exec(headers)
   const filename = filenameMatch ? filenameMatch[1] : null
-  const encoding = /content-transfer-encoding:\s*([^\r\n]+)/i.exec(headers)?.[1]?.toLowerCase().trim() || '7bit'
+  const encoding =
+    /content-transfer-encoding:\s*([^\r\n]+)/i.exec(headers)?.[1]?.toLowerCase().trim() || '7bit'
 
   return { contentType, boundary, disposition, filename, encoding, headers, body }
 }
@@ -546,7 +598,8 @@ const collectParts = part => {
       return
     }
 
-    const isAttachment = p.disposition === 'attachment' || (p.filename && !p.contentType.startsWith('text/'))
+    const isAttachment =
+      p.disposition === 'attachment' || (p.filename && !p.contentType.startsWith('text/'))
 
     if (isAttachment && p.filename) {
       // Normalize encoding to base64 for the download helper

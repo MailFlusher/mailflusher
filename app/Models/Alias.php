@@ -213,7 +213,12 @@ class Alias extends Model
      */
     public function verifiedRecipients()
     {
-        return $this->recipients()->whereNotNull('email_verified_at');
+        // Inactive recipients (e.g. deactivated by a plan downgrade) are excluded
+        // so the forwarding pipeline falls back to the default recipient instead
+        // of trying to deliver to a recipient the user no longer has plan-room for.
+        return $this->recipients()
+            ->whereNotNull('email_verified_at')
+            ->where('recipients.active', true);
     }
 
     /**

@@ -97,7 +97,7 @@
 
                 <section>
                     <h2 class="text-xl font-semibold text-grey-900 mb-3">11. Governing Law</h2>
-                    <p class="text-grey-700 leading-relaxed">These Terms are governed by the laws of Sweden. Any disputes shall be resolved in the courts of Sweden.</p>
+                    <p class="text-grey-700 leading-relaxed">These Terms are governed by the laws of Germany. Any disputes shall be resolved in the courts of Germany.</p>
                 </section>
 
                 <section>

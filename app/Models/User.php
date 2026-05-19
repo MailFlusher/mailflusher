@@ -44,6 +44,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'id',
         'plan',
         'plan_expires_at',
+        'trial_ends_at',
+        'has_used_trial',
+        'trial_reminder_stage',
         'stripe_id',
         'stripe_subscription_id',
         'google_id',
@@ -121,6 +124,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'reject_until' => 'datetime',
         'defer_until' => 'datetime',
         'plan_expires_at' => 'datetime',
+        'trial_ends_at' => 'datetime',
+        'has_used_trial' => 'boolean',
+        'trial_reminder_stage' => 'integer',
         'defer_new_aliases_until' => 'datetime',
         'vault_created_at' => 'datetime',
         'ghost_lock_minutes' => 'integer',
@@ -368,10 +374,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Get all of the user's verified recipients.
+     * Filters out inactive recipients (e.g. deactivated by plan downgrade) so
+     * the forwarding pipeline never targets one.
      */
     public function verifiedRecipients()
     {
-        return $this->recipients()->whereNotNull('email_verified_at');
+        return $this->recipients()
+            ->whereNotNull('email_verified_at')
+            ->where('recipients.active', true);
     }
 
     /**
@@ -542,6 +552,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function onPlan(string $plan): bool
     {
         return $this->getActivePlan() === $plan;
+    }
+
+    /**
+     * Check if the user is currently on a trial (i.e. trial_ends_at is in the future).
+     */
+    public function onTrial(): bool
+    {
+        return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
+    }
+
+    /**
+     * Get the user's plan grants (audit log).
+     */
+    public function planGrants()
+    {
+        return $this->hasMany(PlanGrant::class);
     }
 
     public function canReply(): bool

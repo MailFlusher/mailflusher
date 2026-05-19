@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>{{ config('app.name', 'MailFlusher') }} — Anonymous Email Forwarding | Protect Your Email Privacy</title>
-    <meta name="description" content="MailFlusher is an anonymous email forwarding service hosted in Sweden, EU. Create unlimited email aliases to protect your real address from spam and data breaches. GDPR compliant with GPG encryption support.">
+    <meta name="description" content="MailFlusher is an anonymous email forwarding service hosted in Germany, EU. Create unlimited email aliases to protect your real address from spam and data breaches. GDPR compliant with GPG encryption support.">
     <meta name="keywords" content="email forwarding, anonymous email, email alias, email privacy, spam protection, email encryption, GPG email, disposable email, temporary email, email masking, self-hosted email">
     <meta name="author" content="{{ config('app.name', 'MailFlusher') }}">
     <meta name="robots" content="index, follow">
@@ -14,7 +14,7 @@
     {{-- Open Graph --}}
     <meta property="og:type" content="website">
     <meta property="og:title" content="{{ config('app.name', 'MailFlusher') }} — Anonymous Email Forwarding">
-    <meta property="og:description" content="Protect your real email address with anonymous forwarding aliases. Create unlimited aliases, reply anonymously, and encrypt with GPG. Hosted in Sweden, EU.">
+    <meta property="og:description" content="Protect your real email address with anonymous forwarding aliases. Create unlimited aliases, reply anonymously, and encrypt with GPG. Hosted in Germany, EU.">
     <meta property="og:url" content="https://{{ config('mailflusher.landing_domain', config('mailflusher.domain')) }}">
     <meta property="og:site_name" content="{{ config('app.name', 'MailFlusher') }}">
     <meta property="og:image" content="https://{{ config('mailflusher.landing_domain', config('mailflusher.domain')) }}/MailFlusher_logo_big.png">
@@ -26,7 +26,7 @@
     {{-- Twitter Card --}}
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ config('app.name', 'MailFlusher') }} — Anonymous Email Forwarding">
-    <meta name="twitter:description" content="Protect your real email address with anonymous forwarding aliases. Hosted in Sweden, EU. GDPR compliant. GPG encryption.">
+    <meta name="twitter:description" content="Protect your real email address with anonymous forwarding aliases. Hosted in Germany, EU. GDPR compliant. GPG encryption.">
     <meta name="twitter:image" content="https://{{ config('mailflusher.landing_domain', config('mailflusher.domain')) }}/MailFlusher_logo_big.png">
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -45,7 +45,7 @@
         "name": "{{ config('app.name', 'MailFlusher') }}",
         "applicationCategory": "SecurityApplication",
         "browserRequirements": "Requires a modern web browser",
-        "description": "Anonymous email forwarding service hosted in Sweden, EU. Create unlimited email aliases to protect your real address from spam and data breaches. GDPR compliant.",
+        "description": "Anonymous email forwarding service hosted in Germany, EU. Create unlimited email aliases to protect your real address from spam and data breaches. GDPR compliant.",
         "url": "https://{{ config('mailflusher.landing_domain', config('mailflusher.domain')) }}",
         "operatingSystem": "Web",
         "offers": [
@@ -165,7 +165,7 @@
                 "name": "Where are your servers located?",
                 "acceptedAnswer": {
                     "@@type": "Answer",
-                    "text": "All servers are located in Sweden, within the European Union. Your data is protected by GDPR and Swedish privacy regulations. Data never leaves the EU."
+                    "text": "All servers are located in Germany, within the European Union. Your data is protected by GDPR and German privacy regulations. Data never leaves the EU."
                 }
             }
         ]
@@ -180,10 +180,10 @@
         "name": "{{ config('app.name', 'MailFlusher') }}",
         "url": "https://{{ config('mailflusher.landing_domain', config('mailflusher.domain')) }}",
         "logo": "https://{{ config('mailflusher.landing_domain', config('mailflusher.domain')) }}/svg/logo.svg",
-        "description": "Anonymous email forwarding service hosted in Sweden, EU. GDPR compliant.",
+        "description": "Anonymous email forwarding service hosted in Germany, EU. GDPR compliant.",
         "address": {
             "@@type": "PostalAddress",
-            "addressCountry": "SE"
+            "addressCountry": "DE"
         },
         "contactPoint": {
             "@@type": "ContactPoint",
@@ -303,11 +303,11 @@
                 Protect your real email address from spam, data breaches, and unwanted marketing. Create unique email aliases that forward to your real inbox — deactivate or delete them anytime without affecting your primary email.
             </p>
             <p class="text-white/90 text-base sm:text-lg font-medium mb-4 max-w-2xl mx-auto">
-                100% Swedish. 100% EU. Out of reach of the US CLOUD Act.
+                100% German. 100% EU. Out of reach of the US CLOUD Act.
             </p>
             <p class="text-white text-sm mb-10">
                 <svg class="inline-block h-4 w-4 mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
-                Hosted in Sweden, EU &middot; GDPR compliant &middot; No tracking
+                Hosted in Germany, EU &middot; GDPR compliant &middot; No tracking
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
@@ -593,7 +593,7 @@
                 <span class="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full mb-4">Why jurisdiction matters</span>
                 <h2 class="text-3xl font-bold text-grey-900 mb-4">Your email should live under European law</h2>
                 <p class="text-grey-600 max-w-2xl mx-auto">
-                    Most email forwarding services are US-based. That means your aliases, metadata, and forwarded messages can be compelled under the CLOUD Act, FISA §702, or an NSL — often without any notification to you. {{ config('app.name', 'MailFlusher') }} is run entirely from Sweden, under EU law.
+                    Most email forwarding services are US-based. That means your aliases, metadata, and forwarded messages can be compelled under the CLOUD Act, FISA §702, or an NSL — often without any notification to you. {{ config('app.name', 'MailFlusher') }} is run entirely from Germany, under EU law.
                 </p>
             </div>
 
@@ -605,8 +605,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" />
                         </svg>
                     </div>
-                    <h3 class="text-lg font-semibold text-grey-900 mb-2">Servers in Sweden</h3>
-                    <p class="text-grey-600 text-sm">All infrastructure is located in Sweden. Your data never leaves the EU. No US subsidiary, no US parent company, no data replication outside the union.</p>
+                    <h3 class="text-lg font-semibold text-grey-900 mb-2">Servers in Germany</h3>
+                    <p class="text-grey-600 text-sm">All infrastructure is located in Germany. Your data never leaves the EU. No US subsidiary, no US parent company, no data replication outside the union.</p>
                 </div>
 
                 <div class="bg-white border border-grey-200 rounded-lg p-6">
@@ -626,14 +626,14 @@
                         </svg>
                     </div>
                     <h3 class="text-lg font-semibold text-grey-900 mb-2">No US legal reach</h3>
-                    <p class="text-grey-600 text-sm">We are not bound by the US CLOUD Act, FISA §702, or National Security Letters. Any lawful request must go through Swedish courts under EU data-protection standards.</p>
+                    <p class="text-grey-600 text-sm">We are not bound by the US CLOUD Act, FISA §702, or National Security Letters. Any lawful request must go through German courts under EU data-protection standards.</p>
                 </div>
             </div>
 
             {{-- Comparison table --}}
             <div class="mt-14 max-w-4xl mx-auto bg-white border border-grey-200 rounded-lg overflow-hidden">
                 <div class="px-6 py-4 border-b border-grey-200 bg-grey-50">
-                    <h3 class="text-base font-semibold text-grey-900">Swedish hosting vs US-based forwarding services</h3>
+                    <h3 class="text-base font-semibold text-grey-900">German hosting vs US-based forwarding services</h3>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -647,12 +647,12 @@
                         <tbody class="divide-y divide-grey-100">
                             <tr>
                                 <td class="px-6 py-3 text-grey-700">Server location</td>
-                                <td class="text-center px-6 py-3 text-grey-900">Sweden (EU)</td>
+                                <td class="text-center px-6 py-3 text-grey-900">Germany (EU)</td>
                                 <td class="text-center px-6 py-3 text-grey-500">United States</td>
                             </tr>
                             <tr>
                                 <td class="px-6 py-3 text-grey-700">Governing law</td>
-                                <td class="text-center px-6 py-3 text-grey-900">GDPR + Swedish law</td>
+                                <td class="text-center px-6 py-3 text-grey-900">GDPR + German law</td>
                                 <td class="text-center px-6 py-3 text-grey-500">US federal + state</td>
                             </tr>
                             <tr>
@@ -681,7 +681,7 @@
             </div>
 
             <p class="text-center text-grey-500 text-xs mt-6 max-w-2xl mx-auto">
-                This comparison describes the general legal posture of Sweden-based vs US-based services. It is not legal advice and individual providers may differ. Read the full details in our <a href="/privacy" class="text-indigo-600 hover:text-indigo-500 underline">Privacy Policy</a>.
+                This comparison describes the general legal posture of Germany-based vs US-based services. It is not legal advice and individual providers may differ. Read the full details in our <a href="/privacy" class="text-indigo-600 hover:text-indigo-500 underline">Privacy Policy</a>.
             </p>
         </div>
     </section>
@@ -798,7 +798,7 @@
                         <svg class="h-5 w-5 text-grey-500 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                     </summary>
                     <div class="px-6 pb-6 text-grey-600">
-                        All our servers are located in Sweden, within the European Union. Your data is protected by EU data protection laws (GDPR) and Swedish privacy regulations, which are among the strongest in the world. Your data never leaves the EU. Read more in our <a href="/privacy" class="text-indigo-600 hover:text-indigo-500 underline">Privacy Policy</a>.
+                        All our servers are located in Germany, within the European Union. Your data is protected by the EU GDPR and Germany's Federal Data Protection Act (BDSG) — a regime built on a constitutional right to informational self-determination, recognised by the Federal Constitutional Court since 1983, and enforced by independent federal and state data protection authorities. Your data never leaves the EU. Read more in our <a href="/privacy" class="text-indigo-600 hover:text-indigo-500 underline">Privacy Policy</a>.
                     </div>
                 </details>
 
@@ -877,6 +877,16 @@
                         @if ($key === 'standard')
                             <div class="absolute -top-3 left-1/2 -translate-x-1/2">
                                 <span class="bg-cyan-400 text-cyan-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Popular</span>
+                            </div>
+                        @elseif ($key === 'free' && config('mailflusher.trial.enabled'))
+                            @php
+                                $trialPlanName = config('mailflusher.plans.'.config('mailflusher.trial.plan').'.name');
+                                $trialDays = (int) config('mailflusher.trial.duration_days');
+                            @endphp
+                            <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                                <span class="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide whitespace-nowrap">
+                                    + {{ $trialDays }} days {{ $trialPlanName }} free
+                                </span>
                             </div>
                         @endif
 
@@ -1045,7 +1055,7 @@
                         <span class="text-lg font-bold text-white">{{ config('app.name', 'MailFlusher') }}</span>
                     </div>
                     <p class="text-grey-300 text-sm leading-relaxed">
-                        Protect your real email address with anonymous forwarding aliases. Hosted in Sweden, EU. GDPR compliant.
+                        Protect your real email address with anonymous forwarding aliases. Hosted in Germany, EU. GDPR compliant.
                     </p>
                 </div>
 

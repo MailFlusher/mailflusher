@@ -40,7 +40,7 @@
                 {{ config('app.name', 'MailFlusher') }} vs Firefox Relay
             </h1>
             <p class="text-lg text-white/90 max-w-2xl mx-auto">
-                Firefox Relay is a simple alias service from Mozilla. {{ config('app.name', 'MailFlusher') }} is a fuller-featured service hosted in Sweden. Here's how they actually compare.
+                Firefox Relay is a simple alias service from Mozilla. {{ config('app.name', 'MailFlusher') }} is a fuller-featured service hosted in Germany. Here's how they actually compare.
             </p>
         </div>
     </section>
@@ -144,7 +144,7 @@
                         </tr>
                         <tr>
                             <td class="px-6 py-3 font-medium text-grey-700">Server location</td>
-                            <td class="text-center px-6 py-3">Sweden (EU)</td>
+                            <td class="text-center px-6 py-3">Germany (EU)</td>
                             <td class="text-center px-6 py-3">United States</td>
                         </tr>
                         <tr>
@@ -210,7 +210,7 @@
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-2xl font-bold text-grey-900 mb-6">Where {{ config('app.name', 'MailFlusher') }} is stronger</h2>
             <div class="space-y-4 text-grey-700">
-                <p><strong class="text-grey-900">EU hosting vs US hosting.</strong> Firefox Relay runs on Mozilla's US infrastructure. That means CLOUD Act reach, FISA §702, and US subpoena rules apply. We run from Sweden, under EU GDPR — a fundamentally different legal posture.</p>
+                <p><strong class="text-grey-900">EU hosting vs US hosting.</strong> Firefox Relay runs on Mozilla's US infrastructure. That means CLOUD Act reach, FISA §702, and US subpoena rules apply. We run from Germany, under EU GDPR — a fundamentally different legal posture.</p>
                 <p><strong class="text-grey-900">Actual feature set.</strong> Firefox Relay is deliberately minimal — no rules, no GPG, no multi-recipient forwarding, no custom domains (only a subdomain), no public API, send-from-alias not supported. If any of those matter to you, Relay simply can't do them.</p>
                 <p><strong class="text-grey-900">Reply support without limits.</strong> Relay replies are a Premium feature and historically have had per-thread caps. We don't cap replies.</p>
                 <p><strong class="text-grey-900">Works outside Firefox.</strong> Our API works with Bitwarden, 1Password, and any HTTP client, and dedicated Chrome and Firefox extensions plus a mobile app are in development. You're not tied to one browser.</p>
@@ -235,7 +235,7 @@
 
     <footer class="bg-grey-900 text-grey-400 py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
-            <p>&copy; {{ date('Y') }} {{ config('app.name', 'MailFlusher') }}. Hosted in Sweden, EU. &middot; <a href="/privacy" class="hover:text-white">Privacy</a> &middot; <a href="/terms" class="hover:text-white">Terms</a> &middot; <a href="/help" class="hover:text-white">Help</a></p>
+            <p>&copy; {{ date('Y') }} {{ config('app.name', 'MailFlusher') }}. Hosted in Germany, EU. &middot; <a href="/privacy" class="hover:text-white">Privacy</a> &middot; <a href="/terms" class="hover:text-white">Terms</a> &middot; <a href="/help" class="hover:text-white">Help</a></p>
         </div>
     </footer>
 

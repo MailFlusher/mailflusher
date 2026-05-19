@@ -22,6 +22,7 @@ Schedule::command('mailflusher:expire-burner-aliases')->hourly();
 Schedule::command('mailflusher:prune-redirect-tokens')->daily();
 Schedule::command('mailflusher:prune-ghost-emails')->daily();
 Schedule::command('mailflusher:email-users-with-token-expiring-soon')->daily();
+Schedule::command('mailflusher:process-plan-lifecycle')->dailyAt('09:00');
 Schedule::command('mailflusher:parse-postfix-mail-log')->everyFiveMinutes();
 Schedule::command('auth:clear-resets')->daily();
 Schedule::command('sanctum:prune-expired --hours=168')->daily();

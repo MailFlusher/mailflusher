@@ -51,6 +51,8 @@ class HandleInertiaRequests extends Middleware
                     'darkMode' => $user->dark_mode,
                     'plan' => $user->getActivePlan(),
                     'plan_name' => $user->planConfig()['name'],
+                    'on_trial' => $user->onTrial(),
+                    'trial_ends_at' => $user->trial_ends_at?->toIso8601String(),
                     'can_reply_send' => $user->canReply(),
                     'can_view_failed_deliveries' => $user->canViewFailedDeliveries(),
                     'can_use_blocklist' => $user->canUseBlocklist(),

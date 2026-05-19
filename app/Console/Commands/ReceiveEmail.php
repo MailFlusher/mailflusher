@@ -10,9 +10,9 @@ use App\Models\Domain;
 use App\Models\EmailData;
 use App\Models\OutboundMessage;
 use App\Models\Username;
+use App\Notifications\Account\NearBandwidthLimit;
 use App\Notifications\Email\DisallowedReplySendAttempt;
 use App\Notifications\Email\FailedDeliveryNotification;
-use App\Notifications\Account\NearBandwidthLimit;
 use App\Notifications\Email\SpamReplySendAttempt;
 use App\Services\GhostInbox;
 use App\Services\LeakAttributor;
@@ -364,11 +364,13 @@ class ReceiveEmail extends Command
 
                 $recipientIds = $this->user
                     ->recipients()
-                    ->select(['id', 'email_verified_at'])
+                    ->select(['id', 'email_verified_at', 'active'])
                     ->oldest()
                     ->get()
                     ->filter(function ($item, $key) use ($keys) {
-                        return in_array($key + 1, $keys) && ! is_null($item['email_verified_at']);
+                        return in_array($key + 1, $keys)
+                            && ! is_null($item['email_verified_at'])
+                            && $item['active'];
                     })
                     ->pluck('id')
                     ->take(10)
