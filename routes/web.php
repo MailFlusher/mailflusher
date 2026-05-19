@@ -1,55 +1,56 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Alias\AliasExportController;
 use App\Http\Controllers\Alias\AliasImportController;
-use App\Http\Controllers\Settings\AliasSeparatorController;
+use App\Http\Controllers\Alias\DeactivateAliasController;
+use App\Http\Controllers\Alias\DeleteAliasController;
+use App\Http\Controllers\Alias\SaveAliasLastUsedController;
+use App\Http\Controllers\Alias\TestAutoCreateRegexController;
 use App\Http\Controllers\Auth\ApiAuthenticationController;
 use App\Http\Controllers\Auth\BackupCodeController;
 use App\Http\Controllers\Auth\ForgotUsernameController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\PersonalAccessTokenController;
 use App\Http\Controllers\Auth\TwoFactorAuthController;
 use App\Http\Controllers\Auth\WebauthnController;
 use App\Http\Controllers\Auth\WebauthnEnabledKeyController;
-use App\Http\Controllers\Settings\BannerLocationController;
+use App\Http\Controllers\Billing\PromoController;
+use App\Http\Controllers\Billing\StripeWebhookController;
+use App\Http\Controllers\Billing\SubscriptionController;
 use App\Http\Controllers\Blocklist\BlocklistOneClickController;
-use App\Http\Controllers\Settings\BrowserSessionController;
-use App\Http\Controllers\Settings\DarkModeController;
-use App\Http\Controllers\Alias\DeactivateAliasController;
-use App\Http\Controllers\Settings\DefaultAliasDomainController;
-use App\Http\Controllers\Settings\DefaultAliasFormatController;
-use App\Http\Controllers\Settings\DefaultRecipientController;
-use App\Http\Controllers\Settings\DefaultUsernameController;
-use App\Http\Controllers\Alias\DeleteAliasController;
-use App\Http\Controllers\Settings\DisplayFromFormatController;
-use App\Http\Controllers\Verification\DomainVerificationController;
-use App\Http\Controllers\Settings\EmailSubjectController;
-use App\Http\Controllers\Settings\FromNameController;
-use App\Http\Controllers\Settings\ListUnsubscribeBehaviourController;
-use App\Http\Controllers\Settings\LoginRedirectController;
-use App\Http\Controllers\Settings\PasswordController;
-use App\Http\Controllers\Alias\SaveAliasLastUsedController;
-use App\Http\Controllers\Settings\SettingController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\FailedDelivery\StoreFailedDeliveryController;
 use App\Http\Controllers\Pages\ShowAliasController;
+use App\Http\Controllers\Pages\ShowAliasGroupController;
 use App\Http\Controllers\Pages\ShowBlocklistController;
 use App\Http\Controllers\Pages\ShowDashboardController;
 use App\Http\Controllers\Pages\ShowDomainController;
-use App\Http\Controllers\Pages\ShowAliasGroupController;
 use App\Http\Controllers\Pages\ShowFailedDeliveryController;
 use App\Http\Controllers\Pages\ShowGhostInboxController;
 use App\Http\Controllers\Pages\ShowRecipientController;
 use App\Http\Controllers\Pages\ShowRuleController;
 use App\Http\Controllers\Pages\ShowUsernameController;
+use App\Http\Controllers\RedirectController;
+use App\Http\Controllers\Settings\AliasSeparatorController;
+use App\Http\Controllers\Settings\BannerLocationController;
+use App\Http\Controllers\Settings\BrowserSessionController;
+use App\Http\Controllers\Settings\DarkModeController;
+use App\Http\Controllers\Settings\DefaultAliasDomainController;
+use App\Http\Controllers\Settings\DefaultAliasFormatController;
+use App\Http\Controllers\Settings\DefaultRecipientController;
+use App\Http\Controllers\Settings\DefaultUsernameController;
+use App\Http\Controllers\Settings\DisplayFromFormatController;
+use App\Http\Controllers\Settings\EmailSubjectController;
+use App\Http\Controllers\Settings\FromNameController;
+use App\Http\Controllers\Settings\ListUnsubscribeBehaviourController;
+use App\Http\Controllers\Settings\LoginRedirectController;
+use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Settings\SpamWarningBehaviourController;
 use App\Http\Controllers\Settings\StripTrackersController;
-use App\Http\Controllers\FailedDelivery\StoreFailedDeliveryController;
-use App\Http\Controllers\Alias\TestAutoCreateRegexController;
 use App\Http\Controllers\Settings\UseReplyToController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\RedirectController;
-use App\Http\Controllers\Auth\GoogleAuthController;
-use App\Http\Controllers\ContactController;
-use App\Http\Controllers\Billing\StripeWebhookController;
-use App\Http\Controllers\Billing\SubscriptionController;
+use App\Http\Controllers\Verification\DomainVerificationController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -245,6 +246,10 @@ Route::middleware(['auth', 'verified', '2fa'])->group(function () {
         Route::post('/resume', 'resume')->name('subscription.resume');
         Route::get('/portal', 'portal')->name('subscription.portal');
     });
+
+    Route::post('/promo/redeem', [PromoController::class, 'redeem'])
+        ->middleware('throttle:10,1')
+        ->name('promo.redeem');
 });
 
 Route::group([

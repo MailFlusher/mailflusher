@@ -21,5 +21,6 @@ return [
         'account.destroy',
         'admin.*',
         'subscription.*',
+        'promo.*',
     ],
 ];

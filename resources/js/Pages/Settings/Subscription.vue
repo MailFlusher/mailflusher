@@ -109,6 +109,40 @@
           </div>
         </div>
 
+        <!-- Promo code redemption -->
+        <div class="mt-8">
+          <h4 class="text-lg font-medium text-grey-900 dark:text-white mb-2">
+            Have a promo code?
+          </h4>
+          <p class="text-sm text-grey-500 dark:text-grey-400 mb-3">
+            Redeem a code to add time to your plan. Stacks on top of any time you already have.
+          </p>
+          <form @submit.prevent="redeemPromo" class="flex items-start gap-3 max-w-md">
+            <div class="flex-grow">
+              <input
+                v-model="promoForm.code"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Enter code"
+                class="w-full rounded-lg border-grey-300 dark:border-grey-700 dark:bg-grey-800 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 text-sm uppercase"
+                :disabled="promoForm.processing"
+              />
+              <p v-if="promoForm.errors.code" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                {{ promoForm.errors.code }}
+              </p>
+            </div>
+            <button
+              type="submit"
+              :disabled="promoForm.processing || !promoForm.code"
+              class="rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              <span v-if="promoForm.processing">Redeeming...</span>
+              <span v-else>Redeem</span>
+            </button>
+          </form>
+        </div>
+
         <!-- Billing portal -->
         <div v-if="hasSubscription" class="mt-8">
           <a
@@ -125,7 +159,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
 import SettingsLayout from '../../Layouts/SettingsLayout.vue'
 
 const props = defineProps({
@@ -168,6 +202,15 @@ const resumeSubscription = () => {
   resumeLoading.value = true
   router.post(route('subscription.resume'), {}, {
     onFinish: () => { resumeLoading.value = false },
+  })
+}
+
+const promoForm = useForm({ code: '' })
+
+const redeemPromo = () => {
+  promoForm.transform(data => ({ code: data.code.trim().toUpperCase() })).post(route('promo.redeem'), {
+    preserveScroll: true,
+    onSuccess: () => promoForm.reset('code'),
   })
 }
 </script>
