@@ -25,6 +25,7 @@ class StripeWebhookController extends WebhookController
     /**
      * Subscription activated / plan changed. Stripe fires this on both initial
      * checkout completion and subsequent plan changes via the customer portal.
+     * Also fires on dunning state transitions (active → past_due → unpaid).
      */
     public function handleCustomerSubscriptionUpdated(array $payload): void
     {
@@ -39,6 +40,13 @@ class StripeWebhookController extends WebhookController
 
         $priceId = $stripeSubscription['items']['data'][0]['price']['id'] ?? null;
         $status = $stripeSubscription['status'];
+
+        // Mirror Stripe's state onto the user so the rest of the app (promo guard,
+        // dunning banner) doesn't have to round-trip through Cashier or Stripe.
+        $user->update([
+            'stripe_subscription_id' => $stripeSubscription['id'],
+            'stripe_status' => $status,
+        ]);
 
         if (in_array($status, ['active', 'trialing'])) {
             $planName = $this->getPlanNameFromPriceId($priceId);
@@ -72,6 +80,11 @@ class StripeWebhookController extends WebhookController
         }
 
         $result = $this->planService->expirePlan($user, 'stripe_subscription_cancelled');
+
+        $user->update([
+            'stripe_subscription_id' => null,
+            'stripe_status' => null,
+        ]);
 
         // Only notify if there was actually a non-free plan to end (avoids
         // spamming users whose subscription was already in the free state).

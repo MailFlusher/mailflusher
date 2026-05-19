@@ -414,6 +414,7 @@
         </div>
       </header>
 
+      <PastDueBanner />
       <TrialBanner />
 
       <!-- Page content -->
@@ -480,6 +481,7 @@ import FlashNotification from './../Components/FlashNotification.vue'
 import UsageIndicator from './../Components/UsageIndicator.vue'
 import UpgradeCard from './../Components/UpgradeCard.vue'
 import TrialBanner from './../Components/TrialBanner.vue'
+import PastDueBanner from './../Components/PastDueBanner.vue'
 
 const props = defineProps({
   search: {

@@ -53,6 +53,7 @@ class HandleInertiaRequests extends Middleware
                     'plan_name' => $user->planConfig()['name'],
                     'on_trial' => $user->onTrial(),
                     'trial_ends_at' => $user->trial_ends_at?->toIso8601String(),
+                    'past_due' => $user->hasPastDuePayment(),
                     'can_reply_send' => $user->canReply(),
                     'can_view_failed_deliveries' => $user->canViewFailedDeliveries(),
                     'can_use_blocklist' => $user->canUseBlocklist(),

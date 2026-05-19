@@ -49,6 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'trial_reminder_stage',
         'stripe_id',
         'stripe_subscription_id',
+        'stripe_status',
         'google_id',
         'from_name',
         'email_subject',
@@ -560,6 +561,18 @@ class User extends Authenticatable implements MustVerifyEmail
     public function onTrial(): bool
     {
         return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
+    }
+
+    /**
+     * True if the user's Stripe subscription is past_due — Stripe is retrying
+     * a failed payment. Surfaced as a dunning banner so the user can update
+     * their card before Stripe cancels the subscription. Mirrored from the
+     * webhook (handleCustomerSubscriptionUpdated) — we don't lean on Cashier's
+     * subscriptions table here because user_id there is bigint while ours is UUID.
+     */
+    public function hasPastDuePayment(): bool
+    {
+        return $this->stripe_status === 'past_due';
     }
 
     /**

@@ -164,4 +164,84 @@ class StripeWebhookTest extends TestCase
 
         Notification::assertNothingSent();
     }
+
+    #[Test]
+    public function subscription_updated_mirrors_stripe_status_and_subscription_id_onto_user()
+    {
+        $this->controller->handleCustomerSubscriptionUpdated($this->subscriptionPayload());
+
+        $this->user->refresh();
+
+        $this->assertSame('sub_test', $this->user->stripe_subscription_id);
+        $this->assertSame('active', $this->user->stripe_status);
+    }
+
+    #[Test]
+    public function subscription_updated_past_due_does_not_grant_plan_but_records_status()
+    {
+        $this->user->update(['plan' => 'pro']);
+
+        $this->controller->handleCustomerSubscriptionUpdated(
+            $this->subscriptionPayload(['status' => 'past_due'])
+        );
+
+        $this->user->refresh();
+
+        $this->assertSame('past_due', $this->user->stripe_status);
+        $this->assertSame('sub_test', $this->user->stripe_subscription_id);
+        // Plan remains pro — they still have access while Stripe retries.
+        $this->assertSame('pro', $this->user->plan);
+        $this->assertTrue($this->user->hasPastDuePayment());
+    }
+
+    #[Test]
+    public function subscription_deleted_clears_stripe_status_and_subscription_id()
+    {
+        $this->user->update([
+            'plan' => 'pro',
+            'stripe_subscription_id' => 'sub_test',
+            'stripe_status' => 'past_due',
+        ]);
+
+        $this->controller->handleCustomerSubscriptionDeleted(
+            $this->subscriptionPayload(['status' => 'canceled'])
+        );
+
+        $this->user->refresh();
+
+        $this->assertNull($this->user->stripe_subscription_id);
+        $this->assertNull($this->user->stripe_status);
+        $this->assertFalse($this->user->hasPastDuePayment());
+    }
+
+    #[Test]
+    public function subscription_updated_persists_cashier_subscription_row()
+    {
+        // Regression guard for the UUID/bigint mismatch fix: prod schema previously
+        // had subscriptions.user_id as bigint, which silently failed for UUID users.
+        $this->controller->handleCustomerSubscriptionUpdated($this->subscriptionPayload());
+
+        $this->assertDatabaseHas('subscriptions', [
+            'user_id' => $this->user->id,
+            'stripe_id' => 'sub_test',
+            'stripe_status' => 'active',
+            'stripe_price' => 'price_pro_test',
+        ]);
+
+        // Cashier's helpers should now work end-to-end.
+        $this->assertTrue($this->user->fresh()->subscribed('default'));
+    }
+
+    #[Test]
+    public function has_past_due_payment_returns_false_for_other_statuses()
+    {
+        $this->user->update(['stripe_status' => null]);
+        $this->assertFalse($this->user->hasPastDuePayment());
+
+        $this->user->update(['stripe_status' => 'active']);
+        $this->assertFalse($this->user->fresh()->hasPastDuePayment());
+
+        $this->user->update(['stripe_status' => 'past_due']);
+        $this->assertTrue($this->user->fresh()->hasPastDuePayment());
+    }
 }
